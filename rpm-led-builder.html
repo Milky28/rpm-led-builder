@@ -1,0 +1,1133 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RPM LED Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eef1f0;
+    --surface:#ffffff;
+    --surface-2:#f4f7f6;
+    --border:#d9dfdd;
+    --text:#12181b;
+    --text-dim:#5c6a6d;
+    --accent:#0c7ea6;
+    --accent-text:#ffffff;
+    --accent-soft:#e1f2f8;
+    --danger:#b6362f;
+    --warn:#8a6300;
+    --ok:#1f7a45;
+    --code-bg:#0d1114;
+    --code-border:#232b2f;
+    --code-text:#d7e4e6;
+    --code-accent:#5fd3f2;
+    --font-display:'Rajdhani',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'IBM Plex Mono',monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b0d10; --surface:#14181c; --surface-2:#1a1f23; --border:#272e33;
+      --text:#e8eef0; --text-dim:#8ea0a5; --accent:#49c6ef; --accent-text:#06222b;
+      --accent-soft:rgba(73,198,239,0.14); --danger:#ff7a72; --warn:#f0c14b; --ok:#4ad795;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b0d10; --surface:#14181c; --surface-2:#1a1f23; --border:#272e33;
+    --text:#e8eef0; --text-dim:#8ea0a5; --accent:#49c6ef; --accent-text:#06222b;
+    --accent-soft:rgba(73,198,239,0.14); --danger:#ff7a72; --warn:#f0c14b; --ok:#4ad795;
+  }
+  *{box-sizing:border-box;}
+  /* Author display rules (e.g. .modal-backdrop's flex) would otherwise beat the hidden attribute. */
+  [hidden]{display:none !important;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); padding-inline:16px; padding-block:20px 48px;}
+  h1,h2,h3{font-family:var(--font-display); font-weight:700; letter-spacing:.01em; margin:0;}
+  h2{font-size:1.05rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); display:flex; align-items:center; gap:8px; margin-bottom:12px;}
+  h2 .hint{font-family:var(--font-body); text-transform:none; letter-spacing:0; font-weight:400; font-size:.72rem; color:var(--text-dim); opacity:.85;}
+  p{margin:0;}
+  button{font-family:var(--font-body); font-weight:600; cursor:pointer; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--text); padding:8px 14px; font-size:.82rem; transition:background .15s,border-color .15s,transform .1s;}
+  button:hover{border-color:var(--accent);}
+  button:active{transform:translateY(1px);}
+  button.primary{background:var(--accent); color:var(--accent-text); border-color:var(--accent);}
+  button.primary:hover{filter:brightness(1.08);}
+  button.ghost{background:transparent;}
+  button.small{padding:5px 9px; font-size:.72rem; border-radius:6px;}
+  button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  input[type="text"], input[type="number"], select, textarea{
+    font-family:var(--font-body); background:var(--surface-2); color:var(--text); border:1px solid var(--border);
+    border-radius:7px; padding:8px 10px; font-size:.85rem; width:100%;
+  }
+  input[type="number"]{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+  label{font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); display:block; margin-bottom:4px;}
+  .field{display:flex; flex-direction:column; gap:2px;}
+  .field .other-input{margin-top:6px;}
+  .topbar{
+    max-width:1320px; margin:0 auto 18px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+  .brand .mark{font-family:var(--font-display); font-weight:700; font-size:1.5rem; letter-spacing:.02em;}
+  .brand .mark span{color:var(--accent);}
+  .brand .sub{font-size:.78rem; color:var(--text-dim);}
+  .topbar .actions{display:flex; gap:8px; flex-wrap:wrap;}
+  .wrap{max-width:1320px; margin:0 auto;}
+  .banner{
+    background:var(--accent-soft); border:1px solid var(--accent); border-radius:10px; padding:10px 14px;
+    font-size:.82rem; color:var(--text); margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;
+  }
+  .banner button{white-space:nowrap;}
+  .layout{display:grid; grid-template-columns:minmax(0,1fr) 400px; gap:16px; align-items:start;}
+  .panel{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; min-width:0;}
+  .identity{grid-column:1; grid-row:1;}
+  .colors{grid-column:1; grid-row:2;}
+  .gears{grid-column:1; grid-row:3;}
+  .preview{
+    grid-column:2; grid-row:1 / span 3; position:sticky; top:calc(env(safe-area-inset-top, 0px) + 16px);
+    max-height:calc(100vh - 32px); overflow-y:auto;
+  }
+  @media (max-width:1080px){
+    .layout{grid-template-columns:minmax(0,1fr);}
+    .identity, .colors, .gears, .preview{grid-column:1; grid-row:auto;}
+    .preview{position:static; max-height:none; overflow:visible;}
+  }
+  .field-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+  @media (max-width:900px){ .field-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:480px){ .field-grid{grid-template-columns:1fr;} }
+  .path-preview{
+    margin-top:12px; font-family:var(--font-mono); font-size:.78rem; color:var(--text-dim);
+    background:var(--surface-2); border:1px dashed var(--border); border-radius:8px; padding:8px 12px;
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  }
+  .path-preview b{color:var(--accent); font-weight:600;}
+  .path-note{font-family:var(--font-body); font-size:.7rem; opacity:.85;}
+  .notice{
+    margin-top:10px; font-size:.78rem; line-height:1.45; color:var(--text);
+    background:color-mix(in srgb, var(--warn) 12%, transparent); border:1px solid var(--warn); border-radius:8px; padding:9px 12px;
+  }
+  .notice code{font-family:var(--font-mono); font-size:.72rem;}
+
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px; padding-bottom:14px; border-bottom:1px dashed var(--border);}
+  .toolbar .field{min-width:110px;}
+  .swatch-input{display:flex; align-items:center; gap:6px;}
+  .swatch-input input[type="color"]{width:34px; height:30px; padding:2px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2);}
+
+  .led-strip-edit{display:flex; gap:5px; flex-wrap:wrap; margin-bottom:14px;}
+  .led-chip{
+    width:38px; height:44px; border-radius:7px; border:2px solid var(--border); background:var(--surface-2);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; position:relative;
+  }
+  .led-chip .sw{width:20px; height:20px; border-radius:5px; border:1px solid rgba(0,0,0,.25);}
+  .led-chip .lbl{font-family:var(--font-mono); font-size:.6rem; color:var(--text-dim);}
+  .led-chip.selected{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft);}
+  .led-chip.off .sw{background:repeating-linear-gradient(45deg, var(--border), var(--border) 3px, transparent 3px, transparent 6px); border-style:dashed;}
+  .led-editor{background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:14px; display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;}
+  .led-editor .field{min-width:140px;}
+  .checkline{display:flex; align-items:center; gap:7px; font-size:.8rem; color:var(--text-dim);}
+  .checkline input{width:auto;}
+
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:10px;}
+  table{border-collapse:collapse; width:100%; min-width:520px;}
+  th,td{padding:6px 5px; text-align:center; border-bottom:1px solid var(--border);}
+  thead th{font-family:var(--font-mono); font-size:.68rem; color:var(--text-dim); background:var(--surface-2); position:sticky; top:0;}
+  tbody th{font-family:var(--font-mono); font-weight:600; font-size:.78rem; text-align:left; padding-left:10px; white-space:nowrap;}
+  /* #gearTable scoping is needed to beat the generic input[type="number"]{width:100%} rule. */
+  #gearTable td input[type="number"]{width:calc(6ch + 18px); text-align:center; padding:5px 4px; font-size:.75rem; -moz-appearance:textfield;}
+  #gearTable td input::-webkit-outer-spin-button, #gearTable td input::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
+  #gearTable td input:disabled{opacity:.35;}
+  tr.gear-row:hover{background:var(--surface-2);}
+  .row-actions{display:flex; gap:4px; justify-content:flex-end; padding-right:6px;}
+  .gear-tools{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center;}
+  .add-gear{display:flex; gap:6px; align-items:center;}
+  .add-gear input{width:80px;}
+
+  .preview .row{display:flex; gap:10px; align-items:center; margin-bottom:10px; flex-wrap:wrap;}
+  .rpm-readout{font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:1.3rem; font-weight:600; min-width:88px;}
+  input[type="range"]{width:100%; accent-color:var(--accent);}
+  .led-strip-preview{
+    display:flex; gap:4px; align-items:flex-end; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:10px; padding:14px 10px; margin:12px 0 6px; min-height:64px;
+  }
+  .pled{flex:1; height:38px; border-radius:5px; background:var(--border); opacity:.28; transition:opacity .08s, box-shadow .08s; min-width:6px;}
+  .pled.gap{opacity:0; flex:.35;}
+  .pled.lit{opacity:1; box-shadow:0 0 10px 1px var(--glow, transparent);}
+  .pled.rl{outline:2px solid var(--border); outline-offset:1px;}
+  .led-strip-preview.redline .pled{transition:none;}
+  .led-strip-preview.blink-off .pled.lit{opacity:.1; box-shadow:none;}
+  .redline-status{font-family:var(--font-mono); font-size:.7rem; color:var(--text-dim); min-height:1.2em; margin-bottom:4px;}
+  .redline-status.active{color:var(--danger); font-weight:600;}
+  .preview-caption{font-size:.68rem; color:var(--text-dim); margin-bottom:14px;}
+
+  .validation-list{list-style:none; margin:0 0 18px; padding:0; display:flex; flex-direction:column; gap:6px;}
+  .validation-list li{display:flex; gap:8px; align-items:flex-start; font-size:.78rem; line-height:1.35;}
+  .vicon{flex:0 0 auto; width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.62rem; font-weight:700; margin-top:1px;}
+  .vicon.ok{background:var(--ok); color:#04240f;}
+  .vicon.warn{background:var(--warn); color:#2b2000;}
+  .vicon.error{background:var(--danger); color:#2b0503;}
+
+  .path-line{font-family:var(--font-mono); font-size:.72rem; color:var(--code-accent); background:var(--code-bg); border:1px solid var(--code-border); border-radius:8px 8px 0 0; padding:8px 12px; border-bottom:none; word-break:break-all;}
+  pre#jsonOut{
+    font-family:var(--font-mono); font-size:.7rem; line-height:1.5; background:var(--code-bg); color:var(--code-text);
+    border:1px solid var(--code-border); border-radius:0 0 8px 8px; padding:12px; margin:0; max-height:340px; overflow:auto; white-space:pre;
+  }
+  .copyrow{display:flex; gap:8px; margin-top:10px;}
+  .contribute-steps{margin-top:16px; padding-top:14px; border-top:1px dashed var(--border); font-size:.74rem; color:var(--text-dim); line-height:1.6;}
+  .contribute-steps ol{margin:6px 0 0; padding-left:18px;}
+  .contribute-steps code{font-family:var(--font-mono); background:var(--surface-2); padding:1px 5px; border-radius:4px; font-size:.72rem;}
+
+  .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50;}
+  .modal{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; width:min(640px,100%); max-height:85vh; display:flex; flex-direction:column; gap:12px;}
+  .modal textarea{width:100%; min-height:220px; font-family:var(--font-mono); font-size:.72rem; resize:vertical;}
+  .modal .modal-actions{display:flex; justify-content:flex-end; gap:8px;}
+  .modal-err{color:var(--danger); font-size:.76rem;}
+  footer{max-width:1320px; margin:28px auto 0; font-size:.72rem; color:var(--text-dim); text-align:center;}
+  footer a{color:var(--accent);}
+</style>
+
+<div class="topbar wrap">
+  <div class="brand">
+    <div class="mark">RPM<span>LED</span> Builder</div>
+    <div class="sub">unofficial contribution helper for <a href="https://github.com/Lovely-Sim-Racing/lovely-car-data" style="color:var(--accent)">Lovely Car Data</a> · file format v2.0.0</div>
+  </div>
+  <div class="actions">
+    <button class="ghost small" id="btnExample">Load example</button>
+    <button class="ghost small" id="btnBlank">Start blank</button>
+    <button class="ghost small" id="btnImport">Import JSON</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="banner" id="exampleBanner">
+    <span>Showing example data (McLaren 720S GT3 EVO, Assetto Corsa Competizione) so you can see the tool working. Drag the preview slider past 7200 rpm to see the redline blink. Edit any field, or click <b>Start blank</b> to begin a new car from scratch, or <b>Import JSON</b> to edit an existing file.</span>
+    <button class="small" id="dismissBanner">Got it</button>
+  </div>
+
+  <div class="layout">
+    <section class="panel identity">
+      <h2>Car identity</h2>
+      <div class="field-grid">
+        <div class="field">
+          <label for="fSimSelect">Sim folder</label>
+          <select id="fSimSelect"></select>
+          <input type="text" id="fSim" class="other-input" aria-label="Custom sim folder" placeholder="Type the sim folder name" hidden>
+        </div>
+        <div class="field">
+          <label for="fCarName">Car name</label>
+          <input type="text" id="fCarName" placeholder="e.g. Audi R8 LMS">
+        </div>
+        <div class="field">
+          <label for="fCarId">Car ID (SimHub CarId)</label>
+          <input type="text" id="fCarId" placeholder="e.g. audi_r8_lms">
+        </div>
+        <div class="field">
+          <label for="fCarClassSelect">Car class</label>
+          <select id="fCarClassSelect"></select>
+          <input type="text" id="fCarClass" class="other-input" aria-label="Custom car class" placeholder="Type the class shorthand" hidden>
+        </div>
+        <div class="field">
+          <label for="fLedNumber">LED count</label>
+          <input type="number" id="fLedNumber" min="1" max="40" step="1">
+        </div>
+        <div class="field">
+          <label for="fBlink">Redline blink interval (ms)</label>
+          <input type="number" id="fBlink" min="0" step="5">
+        </div>
+      </div>
+      <div class="path-preview">Suggested path: <b id="pathPreview">data/…/….json</b> <span class="path-note">file name = Car ID, cleaned up the same way the repo does it</span></div>
+      <div class="notice" id="lmuNotice" hidden>
+        <b>LMU files are generated.</b> In Lovely Car Data, <code>data/lmu/*.json</code> is built from the templates in <code>src_data/lmu/*.jsonc</code> by <code>scripts/build_profiles.py</code>, and every build overwrites those files. Use this tool to work out the values, then put them in the matching template instead of submitting this file.
+      </div>
+    </section>
+
+    <section class="panel colors">
+      <h2>LED colors <span class="hint">RL = redline flash · 1…N = strip, low→high RPM</span></h2>
+      <div class="toolbar">
+        <div class="field">
+          <label for="gradStart">Gradient start</label>
+          <div class="swatch-input"><input type="color" id="gradStart" value="#00ff00"></div>
+        </div>
+        <div class="field">
+          <label for="gradEnd">Gradient end</label>
+          <div class="swatch-input"><input type="color" id="gradEnd" value="#ff0000"></div>
+        </div>
+        <button class="small" id="btnApplyGradient">Apply to LEDs 1…N</button>
+        <div class="field">
+          <label for="rlColor">Redline (RL) color</label>
+          <div class="swatch-input"><input type="color" id="rlColor" value="#ff00ff"></div>
+        </div>
+      </div>
+      <div class="led-strip-edit" id="ledStripEdit"></div>
+      <div class="led-editor" id="ledEditor"></div>
+    </section>
+
+    <section class="panel gears">
+      <h2>Per-gear RPM breakpoints</h2>
+      <div class="table-wrap"><table id="gearTable">
+        <thead><tr id="gearTableHead"></tr></thead>
+        <tbody id="gearTableBody"></tbody>
+      </table></div>
+      <div class="gear-tools">
+        <button class="small" id="presetShort">Set gears: R,N,1–6</button>
+        <button class="small" id="presetLong">Set gears: R,N,1–8</button>
+        <div class="add-gear">
+          <input type="text" id="newGearName" placeholder="e.g. 9">
+          <button class="small" id="btnAddGear">Add gear</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel preview">
+      <h2>Live preview</h2>
+      <div class="row">
+        <div class="field" style="flex:1;">
+          <label for="prevGear">Gear</label>
+          <select id="prevGear"></select>
+        </div>
+        <div class="rpm-readout" id="prevRpmReadout">0</div>
+      </div>
+      <input type="range" id="prevRpm" min="0" max="9000" step="25" value="0">
+      <div class="led-strip-preview" id="ledStripPreview"></div>
+      <div class="redline-status" id="redlineStatus" aria-live="polite"></div>
+      <p class="preview-caption">Illustrative only — drag the slider to see which LEDs would be lit at that RPM in the selected gear.</p>
+
+      <h2 style="margin-top:18px;">Validation</h2>
+      <ul class="validation-list" id="validationList"></ul>
+
+      <h2>JSON output</h2>
+      <div class="path-line" id="pathLine">data/…/….json</div>
+      <pre id="jsonOut"></pre>
+      <div class="copyrow">
+        <button class="primary small" id="btnCopy" style="flex:1;">Copy JSON</button>
+      </div>
+      <div class="contribute-steps">
+        This tool only produces the JSON text — it doesn't submit anything for you.
+        <ol>
+          <li>Copy the JSON above.</li>
+          <li>On GitHub, open <code>lovely-car-data</code> and go to <code id="pathLine2">data/…/….json</code>. Edit the existing file with the pencil icon, or use <b>Add file → Create new file</b> in the sim folder for a new car. GitHub creates a fork for you if needed.</li>
+          <li>Paste the JSON, choose <b>Propose changes</b>, then open the pull request.</li>
+        </ol>
+        The output already uses the repo's layout (arrays on one line). If you commit from a local clone with the repo's pre-commit hooks installed, check the diff: the JSON prettifier hook may spread the arrays over many lines.
+        Note: this tool can't edit the optional <code>carSettings</code> field (advanced, rarely used). If an imported file has it, or other fields like <code>_schemaVersion</code>, they're written back unchanged.
+      </div>
+    </aside>
+  </div>
+</div>
+
+<footer>Unofficial fan-made tool, not affiliated with Lovely Sim Racing. Data format &copy; Lovely Sim Racing, ATSR &amp; Gomez Sim Industries.</footer>
+
+<div class="modal-backdrop" id="importBackdrop" hidden>
+  <div class="modal">
+    <h2 style="margin-bottom:0;">Import existing JSON</h2>
+    <p style="font-size:.78rem; color:var(--text-dim);">Paste the contents of an existing car file (or a work-in-progress one) to load it into the editor.</p>
+    <textarea id="importText" placeholder='{ "carName": "...", "carId": "...", ... }'></textarea>
+    <div class="modal-err" id="importErr" hidden></div>
+    <div class="modal-actions">
+      <button class="ghost" id="importCancel">Cancel</button>
+      <button class="primary" id="importParse">Load into editor</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var SIM_FOLDERS = ["assettocorsa","assettocorsacompetizione","assettocorsaevo","automobilista2","f12024","f12025","iracing","lmu","projectmotorracing","rrre"];
+  // carClass values used by existing Lovely Car Data files, per sim, most used first.
+  // Snapshot of the repo's main branch taken 2026-09-16 (placeholder "Manual input needed" left out).
+  var CLASSES_BY_SIM = {
+    "assettocorsa": ["FHY"],
+    "assettocorsacompetizione": ["GT3","GT4","GT2","CUP","ST","GTC","TCX"],
+    "assettocorsaevo": ["GT3","DAL","F1","GT2","GT4","STO","296","FCH","M2","MX5","SP3"],
+    "automobilista2": ["GT3","GTE","GT4","LMDh","F-USA Gen3","P1 Gen2","Copa Truck","F-U","LMP2","P1 Gen1","CUP","F-Reiza","FHY","P3","F-V10_Gen2","LMP2_05","LMP2_05_LD","Mitsubishi Lancer Cup","RX","Super Trofeo","Copa Montana","DPI","f-dirt","F-USA 2023","F-USA Gen2","Formula Trainer Advanced","Formula V10 Gen1","formula_v10_gen2","Ginetta G40 Cup","GT1","GT3 Gen1","GT5","Kart Cross","Karting Shifter","Ligier European Series","P1","P2","P4","Sprint Race","Super Kart","Super Trophy Trucks"],
+    "f12024": ["F2","F1","ALP","AMR","FER","HAS","MCL","MER","RB","RBR","SAU","WIL"],
+    "f12025": ["F2","ALP","AMR","FER","HAS","MCL","MER","RB","RBR","WIL","AUD","CAD","F1","F1W","MYT","SAU"],
+    "iracing": ["GT3","GT4","GTP","GTE","TCR","CUP","FVEE","NXG","ORE","CAT","F1","Gen4","GT1","INDY","LMP1","LMP2","SF","SUP","CTS","ENAS","F1.6","F2.0","F296","F3","F3.5","F4","GR86","iR01","LMP3","M2","M2C","MX5","NXT","SCCA","SFL","SR10","SR8","USF"],
+    "lmu": ["GT3","HYP","LMP2","GTE","LMP3","LMP2_ELMS","GT3 2026","HYP 2026"],
+    "projectmotorracing": ["GTE"],
+    "rrre": ["TCR"]
+  };
+  // Shorthands listed in the repo's data/car-classes.json that no car file uses yet.
+  var UNUSED_REPO_CLASSES = ["ALF","ATR","GTD","GTO","HAC","HY","P992","SF23"];
+  var CAR_CLASSES = (function(){
+    var seen = {}, all = [];
+    Object.keys(CLASSES_BY_SIM).forEach(function(sim){ CLASSES_BY_SIM[sim].forEach(function(c){ if(!seen[c]){ seen[c]=true; all.push(c); } }); });
+    UNUSED_REPO_CLASSES.forEach(function(c){ if(!seen[c]){ seen[c]=true; all.push(c); } });
+    return all.sort(function(a,b){ return a.toLowerCase() < b.toLowerCase() ? -1 : a.toLowerCase() > b.toLowerCase() ? 1 : 0; });
+  })();
+  var OTHER = "__other";
+
+  // A <select> plus a hidden text box revealed by "Other…". A datalist was used before, but
+  // browsers filter its suggestions by the current value, hiding every other option.
+  // groups: [{label, options}] — a null label adds the options without an <optgroup>.
+  function fillPicker(selectId, groups, blankLabel){
+    var sel = document.getElementById(selectId);
+    sel.innerHTML = "";
+    function add(parent, value, text){ var o=document.createElement("option"); o.value=value; o.textContent=text; parent.appendChild(o); }
+    if(blankLabel) add(sel, "", blankLabel);
+    groups.forEach(function(grp){
+      if(!grp.options.length) return;
+      var parent = sel;
+      if(grp.label){ parent = document.createElement("optgroup"); parent.label = grp.label; sel.appendChild(parent); }
+      grp.options.forEach(function(v){ add(parent, v, v); });
+    });
+    add(sel, OTHER, "Other…");
+  }
+  fillPicker("fSimSelect", [{label:null, options:SIM_FOLDERS}]);
+
+  // Classes already used in the selected sim come first, then every other known class.
+  function renderClassPicker(){
+    var sim = slugify(state.simId);
+    var own = CLASSES_BY_SIM[sim] || [];
+    var rest = CAR_CLASSES.filter(function(c){ return own.indexOf(c) === -1; });
+    fillPicker("fCarClassSelect", own.length
+      ? [{label:"Used in " + sim, options:own}, {label:"Other sims", options:rest}]
+      : [{label:null, options:rest}], "Choose a class");
+    syncPicker("fCarClassSelect", "fCarClass", state.carClass, CAR_CLASSES);
+  }
+
+  function syncPicker(selectId, inputId, value, options){
+    var sel = document.getElementById(selectId), inp = document.getElementById(inputId);
+    var listed = options.indexOf(value) !== -1 || (value === "" && !!sel.querySelector('option[value=""]'));
+    sel.value = listed ? value : OTHER;
+    inp.hidden = listed;
+    inp.value = listed ? "" : value;
+  }
+
+  function bindPicker(selectId, inputId, key, options){
+    var sel = document.getElementById(selectId), inp = document.getElementById(inputId);
+    sel.addEventListener("change", function(){
+      if(sel.value === OTHER){
+        inp.hidden = false;
+        inp.value = options.indexOf(state[key]) === -1 ? state[key] : "";
+        state[key] = inp.value;
+        inp.focus();
+      } else {
+        inp.hidden = true;
+        state[key] = sel.value;
+      }
+      if(key === "simId") renderClassPicker();
+      renderPathPreview(); renderValidation(); renderJson();
+    });
+  }
+
+  var EXAMPLE_TEXT = '{\n  "carName": "McLaren 720S GT3 EVO",\n  "carId": "mclaren_720s_gt3_evo",\n  "carClass": "GT3",\n  "ledNumber": 12,\n  "redlineBlinkInterval": 250,\n  "ledColor": ["#FF0000FF","#FF00FF00","#FF00FF00","#00000000","#FF00FF00","#FF00FF00","#FFFFFF00","#FFFFFF00","#FFFF8000","#FFFF8000","#00000000","#FFFF0000","#FFFF0000"],\n  "ledRpm": [\n    {\n      "R": [7200,5300,5500,0,5700,5900,6100,6300,6500,6700,0,6900,7100],\n      "N": [7200,5300,5500,0,5700,5900,6100,6300,6500,6700,0,6900,7100],\n      "1": [7200,5300,5500,0,5700,5900,6100,6300,6500,6700,0,6900,7100],\n      "2": [7200,5300,5500,0,5700,5900,6100,6300,6500,6700,0,6900,7100],\n      "3": [7200,5300,5500,0,5700,5900,6100,6300,6500,6700,0,6900,7100],\n      "4": [7200,5300,5500,0,5700,5900,6100,6300,6500,6700,0,6900,7100],\n      "5": [7200,5300,5500,0,5700,5900,6100,6300,6500,6700,0,6900,7100],\n      "6": [7200,5300,5500,0,5700,5900,6100,6300,6500,6700,0,6900,7100],\n      "7": [7200,5300,5500,0,5700,5900,6100,6300,6500,6700,0,6900,7100],\n      "8": [7200,5300,5500,0,5700,5900,6100,6300,6500,6700,0,6900,7100]\n    }\n  ]\n}\n';
+
+  var BLANK_LED_NUMBER = 10;
+
+  var state = {
+    simId: "assettocorsacompetizione",
+    carName: "",
+    carId: "",
+    carClass: "",
+    ledNumber: BLANK_LED_NUMBER,
+    redlineBlink: 0,
+    ledColors: [],   // [{hex:'#AARRGGBB', off:bool}]
+    gearOrder: [],   // ['R','N','1',...]
+    gearRpm: {},     // {gear: [int,...]}
+    extra: {}        // imported keys this editor doesn't handle (_schemaVersion, carSettings, …), written back unchanged
+  };
+
+  var KNOWN_KEYS = ["carName","carId","carClass","ledNumber","redlineBlinkInterval","ledColor","ledRpm"];
+  var PLACEHOLDER_NAMES = ["New Car"], PLACEHOLDER_IDS = ["new_car_id"];
+
+  var selectedLed = 0;
+
+  // ---------- helpers ----------
+  function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
+  function pad2(n){ n=Math.round(clamp(n,0,255)).toString(16).toUpperCase(); return n.length<2?"0"+n:n; }
+
+  function rgbToArgbHex(r,g,b,a){ return "#"+pad2(a!==undefined?a:255)+pad2(r)+pad2(g)+pad2(b); }
+
+  function argbHexToRgb(hex){
+    hex = (hex||"").replace("#","");
+    if(hex.length===8){ return {a:parseInt(hex.slice(0,2),16), r:parseInt(hex.slice(2,4),16), g:parseInt(hex.slice(4,6),16), b:parseInt(hex.slice(6,8),16)}; }
+    if(hex.length===6){ return {a:255, r:parseInt(hex.slice(0,2),16), g:parseInt(hex.slice(2,4),16), b:parseInt(hex.slice(4,6),16)}; }
+    return {a:255,r:255,g:255,b:255};
+  }
+
+  function argbToCssRgba(hex){
+    var c = argbHexToRgb(hex);
+    return "rgba("+c.r+","+c.g+","+c.b+","+(c.a/255).toFixed(2)+")";
+  }
+
+  function argbToRgbHexOnly(hex){
+    var c = argbHexToRgb(hex);
+    return "#"+pad2(c.r)+pad2(c.g)+pad2(c.b);
+  }
+
+  var _canvas = document.createElement("canvas"); _canvas.width=1; _canvas.height=1;
+  var _cctx = _canvas.getContext("2d");
+  function resolveAnyColorToArgb(raw){
+    raw = (raw||"").trim();
+    if(/^#([0-9A-Fa-f]{8})$/.test(raw)) return raw.toUpperCase();
+    if(/^#([0-9A-Fa-f]{6})$/.test(raw)) return ("#FF"+raw.slice(1)).toUpperCase();
+    try{
+      _cctx.fillStyle = "#000"; // reset
+      _cctx.fillStyle = raw;
+      var resolved = _cctx.fillStyle; // browser normalizes to #rrggbb or rgba(...)
+      if(/^#([0-9A-Fa-f]{6})$/.test(resolved)) return ("#FF"+resolved.slice(1)).toUpperCase();
+      var m = resolved.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?\)/);
+      if(m) return rgbToArgbHex(+m[1], +m[2], +m[3], m[4]!==undefined ? Math.round(+m[4]*255) : 255);
+    }catch(e){}
+    return "#FFFFFFFF";
+  }
+
+  function slugify(str){
+    str = (str||"").toString();
+    try{ str = str.normalize("NFD").replace(/[\u0300-\u036f]/g,""); }catch(e){}
+    str = str.toLowerCase();
+    str = str.replace(/\s+/g,"-");
+    str = str.replace(/[^a-z0-9-]/g,"-");
+    str = str.replace(/-+/g,"-");
+    str = str.replace(/^-+|-+$/g,"");
+    return str;
+  }
+
+  function jstr(s){ return JSON.stringify(String(s===undefined||s===null?"":s)); }
+
+  function defaultRpmArray(len){ var a=[]; for(var i=0;i<len;i++) a.push(0); return a; }
+  function defaultColorArray(len){ var a=[]; for(var i=0;i<len;i++) a.push({hex:"#FFFFFFFF", off:false}); return a; }
+
+  // ---------- array resize on ledNumber change ----------
+  function resizeToLedNumber(newLedNumber){
+    var newLen = newLedNumber + 1;
+    var oldColors = state.ledColors;
+    var nc = [];
+    for(var i=0;i<newLen;i++){ nc.push(oldColors[i] ? oldColors[i] : {hex:"#FFFFFFFF", off:false}); }
+    state.ledColors = nc;
+    state.gearOrder.forEach(function(g){
+      var arr = state.gearRpm[g] || [];
+      var na = [];
+      for(var i=0;i<newLen;i++){ na.push(arr[i]!==undefined ? arr[i] : 0); }
+      state.gearRpm[g] = na;
+    });
+    state.ledNumber = newLedNumber;
+    if(selectedLed >= newLen) selectedLed = newLen-1;
+  }
+
+  // ---------- load data into state ----------
+  function loadBlank(){
+    state.carName = "";
+    state.carId = "";
+    state.carClass = "";
+    state.ledNumber = BLANK_LED_NUMBER;
+    state.redlineBlink = 0;
+    state.extra = {};
+    state.gearOrder = ["R","N","1","2","3","4","5","6"];
+    state.gearRpm = {};
+    state.gearOrder.forEach(function(g){ state.gearRpm[g] = defaultRpmArray(BLANK_LED_NUMBER+1); });
+    state.ledColors = defaultColorArray(BLANK_LED_NUMBER+1);
+    selectedLed = 0;
+  }
+
+  function stripComments(text){
+    return text.replace(/("(?:\\.|[^"\\])*")|\/\/.*$/mg, function(m, g1){ return g1 !== undefined ? g1 : ""; });
+  }
+
+  function extractGearOrder(cleanedText){
+    var m = cleanedText.match(/"ledRpm"\s*:\s*\[\s*\{([\s\S]*?)\}\s*\]/);
+    if(!m) return null;
+    var body = m[1];
+    var order = [];
+    var re = /"([^"]+)"\s*:\s*\[/g, mm;
+    while((mm = re.exec(body))){ order.push(mm[1]); }
+    return order.length ? order : null;
+  }
+
+  function importFromText(rawText){
+    var cleaned = stripComments(rawText);
+    var obj;
+    try{ obj = JSON.parse(cleaned); }
+    catch(e){ throw new Error("Could not parse JSON: " + e.message); }
+
+    var ledNumber = obj.ledNumber !== undefined ? obj.ledNumber : BLANK_LED_NUMBER;
+    var expectedLen = ledNumber + 1;
+
+    var colorsSrc = Array.isArray(obj.ledColor) ? obj.ledColor : [];
+    var colors = [];
+    for(var i=0;i<expectedLen;i++){
+      var raw = colorsSrc[i];
+      if(raw === undefined){ colors.push({hex:"#FFFFFFFF", off:false}); continue; }
+      var argb = resolveAnyColorToArgb(raw);
+      colors.push({hex: argb, off: argb === "#00000000"});
+    }
+
+    var gearOrder = extractGearOrder(cleaned);
+    var rpmObj = (obj.ledRpm && obj.ledRpm[0]) ? obj.ledRpm[0] : {};
+    if(!gearOrder) gearOrder = Object.keys(rpmObj);
+
+    var gearRpm = {};
+    gearOrder.forEach(function(g){
+      var arr = Array.isArray(rpmObj[g]) ? rpmObj[g].slice() : [];
+      var na = [];
+      for(var i=0;i<expectedLen;i++){ na.push(typeof arr[i] === "number" ? arr[i] : (parseInt(arr[i],10)||0)); }
+      gearRpm[g] = na;
+    });
+    if(gearOrder.length === 0){ gearOrder = ["1"]; gearRpm["1"] = defaultRpmArray(expectedLen); }
+
+    state.carName = obj.carName || "";
+    state.carId = obj.carId || "";
+    state.carClass = obj.carClass || "";
+    state.ledNumber = ledNumber;
+    state.redlineBlink = obj.redlineBlinkInterval !== undefined ? obj.redlineBlinkInterval : 0;
+    state.ledColors = colors;
+    state.gearOrder = gearOrder;
+    state.gearRpm = gearRpm;
+    state.extra = {};
+    Object.keys(obj).forEach(function(k){ if(KNOWN_KEYS.indexOf(k) === -1) state.extra[k] = obj[k]; });
+    selectedLed = 0;
+  }
+
+  // ---------- build output JSON text (matches repo's compact-array formatting) ----------
+  // Key order follows the repo's format_json.py: _schemaVersion first, the known keys, then anything else.
+  function buildJsonText(){
+    var entries = [];
+    if("_schemaVersion" in state.extra) entries.push('  "_schemaVersion": ' + JSON.stringify(state.extra._schemaVersion));
+    entries.push('  "carName": ' + jstr(state.carName));
+    entries.push('  "carId": ' + jstr(state.carId));
+    entries.push('  "carClass": ' + jstr(state.carClass));
+    entries.push('  "ledNumber": ' + (parseInt(state.ledNumber,10)||0));
+    entries.push('  "redlineBlinkInterval": ' + (parseInt(state.redlineBlink,10)||0));
+    var colorVals = state.ledColors.map(function(c){ return jstr(c.off ? "#00000000" : c.hex); });
+    entries.push('  "ledColor": [' + colorVals.join(",") + "]");
+    var gearLines = state.gearOrder.map(function(g){
+      return "      " + jstr(g) + ": [" + (state.gearRpm[g] || []).join(",") + "]";
+    });
+    entries.push('  "ledRpm": [\n    {\n' + (gearLines.length ? gearLines.join(",\n") + "\n" : "") + "    }\n  ]");
+    Object.keys(state.extra).forEach(function(k){
+      if(k === "_schemaVersion") return;
+      entries.push("  " + JSON.stringify(k) + ": " + JSON.stringify(state.extra[k], null, 2).replace(/\n/g, "\n  "));
+    });
+    return "{\n" + entries.join(",\n") + "\n}\n";
+  }
+
+  function currentPath(){
+    var slug = slugify(state.carId);
+    var sim = slugify(state.simId) || "{sim}";
+    return "data/" + sim + "/" + (slug || "{car-id}") + ".json";
+  }
+
+  // LMU car files in the repo are build output (src_data/lmu templates → scripts/build_profiles.py);
+  // _schemaVersion only appears in those generated files.
+  function isGeneratedLmu(){
+    return slugify(state.simId) === "lmu" || "_schemaVersion" in state.extra;
+  }
+
+  // How a gear's LED thresholds are laid out along the strip. Gaps (0) are ignored.
+  // rising/falling: one end to the other; outsideIn/insideOut: mirrored halves meeting in (or starting from) the middle.
+  function classifyLayout(arr){
+    var vals = arr.slice(1).filter(function(v){ return v > 0; });
+    if(vals.length < 2) return "trivial";
+    var dirs = [];
+    for(var i=1;i<vals.length;i++){ if(vals[i] !== vals[i-1]) dirs.push(vals[i] > vals[i-1] ? 1 : -1); }
+    if(!dirs.length) return "trivial";
+    var turns = 0;
+    for(var j=1;j<dirs.length;j++){ if(dirs[j] !== dirs[j-1]) turns++; }
+    if(turns === 0) return dirs[0] > 0 ? "rising" : "falling";
+    if(turns === 1) return dirs[0] > 0 ? "outsideIn" : "insideOut";
+    return "irregular";
+  }
+  var LAYOUT_LABELS = {
+    rising: "left → right",
+    falling: "right → left",
+    outsideIn: "mirrored, outer LEDs first",
+    insideOut: "mirrored, centre LEDs first"
+  };
+
+  // ---------- rendering ----------
+  function bindField(id, key, kind){
+    var el = document.getElementById(id);
+    el.addEventListener("input", function(){
+      var v = el.value;
+      if(kind === "int") v = v === "" ? 0 : parseInt(v,10);
+      state[key] = v;
+      if(key === "simId") renderClassPicker();
+      renderPathPreview();
+      renderPreviewSelectors();
+      renderPreview();
+      renderValidation();
+      renderJson();
+    });
+  }
+
+  // ledNumber resizes every LED color / RPM array, which is destructive —
+  // only commit that on blur/Enter ("change"), not on every keystroke while typing.
+  document.getElementById("fLedNumber").addEventListener("change", function(e){
+    var n = clamp(parseInt(e.target.value,10)||1, 1, 40);
+    resizeToLedNumber(n);
+    renderAll();
+  });
+
+  function syncFieldsFromState(){
+    syncPicker("fSimSelect", "fSim", state.simId, SIM_FOLDERS);
+    document.getElementById("fCarName").value = state.carName;
+    document.getElementById("fCarId").value = state.carId;
+    renderClassPicker();
+    document.getElementById("fLedNumber").value = state.ledNumber;
+    document.getElementById("fBlink").value = state.redlineBlink;
+  }
+
+  function renderPathPreview(){
+    var p = currentPath();
+    document.getElementById("pathPreview").textContent = p;
+    document.getElementById("pathLine").textContent = p;
+    document.getElementById("pathLine2").textContent = p;
+    document.getElementById("lmuNotice").hidden = !isGeneratedLmu();
+  }
+
+  function ledLabel(i){ return i === 0 ? "RL" : String(i); }
+
+  function renderColorStrip(){
+    var rl = state.ledColors[0];
+    if(rl && !rl.off) document.getElementById("rlColor").value = argbToRgbHexOnly(rl.hex);
+    var wrap = document.getElementById("ledStripEdit");
+    wrap.innerHTML = "";
+    state.ledColors.forEach(function(c,i){
+      var chip = document.createElement("div");
+      chip.className = "led-chip" + (i===selectedLed ? " selected":"") + (c.off ? " off":"");
+      chip.title = "LED " + ledLabel(i);
+      chip.tabIndex = 0;
+      var sw = document.createElement("div");
+      sw.className = "sw";
+      if(!c.off) sw.style.background = argbToCssRgba(c.hex);
+      var lbl = document.createElement("div");
+      lbl.className = "lbl";
+      lbl.textContent = ledLabel(i);
+      chip.appendChild(sw); chip.appendChild(lbl);
+      chip.addEventListener("click", function(){ selectedLed = i; renderColorStrip(); renderLedEditor(); });
+      wrap.appendChild(chip);
+    });
+  }
+
+  function renderLedEditor(){
+    var box = document.getElementById("ledEditor");
+    var c = state.ledColors[selectedLed];
+    if(!c){ box.innerHTML=""; return; }
+    box.innerHTML = "";
+
+    var title = document.createElement("div");
+    title.style.fontFamily = "var(--font-mono)";
+    title.style.fontSize = ".8rem";
+    title.style.fontWeight = "600";
+    title.style.minWidth = "90px";
+    title.textContent = "LED " + ledLabel(selectedLed);
+    box.appendChild(title);
+
+    var colorField = document.createElement("div");
+    colorField.className = "field";
+    colorField.innerHTML = '<label>Color</label>';
+    var swWrap = document.createElement("div"); swWrap.className="swatch-input";
+    var colorInput = document.createElement("input"); colorInput.type="color";
+    colorInput.value = argbToRgbHexOnly(c.hex);
+    colorInput.disabled = c.off;
+    var hexInput = document.createElement("input"); hexInput.type="text"; hexInput.style.width="110px";
+    hexInput.value = c.off ? "#00000000" : c.hex;
+    hexInput.disabled = c.off;
+    swWrap.appendChild(colorInput); swWrap.appendChild(hexInput);
+    colorField.appendChild(swWrap);
+    box.appendChild(colorField);
+
+    var alphaField = document.createElement("div");
+    alphaField.className = "field"; alphaField.style.minWidth="140px";
+    var a = argbHexToRgb(c.hex).a;
+    var alphaLabel = document.createElement("label"); alphaLabel.textContent = "Alpha ("+a+")";
+    alphaField.appendChild(alphaLabel);
+    var alphaInput = document.createElement("input"); alphaInput.type="range"; alphaInput.min="0"; alphaInput.max="255"; alphaInput.value=a;
+    alphaInput.disabled = c.off;
+    alphaField.appendChild(alphaInput);
+    box.appendChild(alphaField);
+
+    var offField = document.createElement("div");
+    offField.className = "checkline";
+    var offInput = document.createElement("input"); offInput.type="checkbox"; offInput.id="ledOffToggle"; offInput.checked = c.off;
+    var offLbl = document.createElement("label"); offLbl.setAttribute("for","ledOffToggle"); offLbl.style.textTransform="none"; offLbl.style.fontWeight="400"; offLbl.style.fontSize=".8rem";
+    offLbl.textContent = selectedLed === 0
+      ? "Transparent (no redline color) — redline RPM is kept"
+      : "Gap (unlit divider) — zeroes RPM for this LED in every gear";
+    offField.appendChild(offInput); offField.appendChild(offLbl);
+    box.appendChild(offField);
+
+    // Update state + dependent panels in place, without tearing down this box's
+    // DOM — colorInput/alphaInput fire "input" continuously while being dragged,
+    // and rebuilding the box mid-drag would kill the native picker's focus.
+    function commitColor(argb, sourceEl){
+      c.hex = argb; c.off = false;
+      if(sourceEl !== colorInput) colorInput.value = argbToRgbHexOnly(argb);
+      if(sourceEl !== hexInput) hexInput.value = argb;
+      var a2 = argbHexToRgb(argb).a;
+      if(sourceEl !== alphaInput) alphaInput.value = a2;
+      alphaLabel.textContent = "Alpha ("+a2+")";
+      renderColorStrip(); renderPreview(); renderValidation(); renderJson();
+    }
+
+    colorInput.addEventListener("input", function(){
+      var rgb = colorInput.value; // #rrggbb
+      var alpha = argbHexToRgb(c.hex).a;
+      commitColor(rgbToArgbHex(parseInt(rgb.slice(1,3),16), parseInt(rgb.slice(3,5),16), parseInt(rgb.slice(5,7),16), alpha), colorInput);
+    });
+    hexInput.addEventListener("change", function(){
+      commitColor(resolveAnyColorToArgb(hexInput.value), hexInput);
+    });
+    alphaInput.addEventListener("input", function(){
+      var rgb = argbHexToRgb(c.hex);
+      commitColor(rgbToArgbHex(rgb.r, rgb.g, rgb.b, parseInt(alphaInput.value,10)), alphaInput);
+    });
+    offInput.addEventListener("change", function(){
+      c.off = offInput.checked;
+      if(c.off){
+        c.hex = "#00000000";
+        if(selectedLed > 0) state.gearOrder.forEach(function(g){ state.gearRpm[g][selectedLed] = 0; });
+      }
+      renderColorStrip(); renderLedEditor(); renderGearTable(); renderPreview(); renderValidation(); renderJson();
+    });
+  }
+
+  function applyGradient(){
+    var startRgb = document.getElementById("gradStart").value; // #rrggbb
+    var endRgb = document.getElementById("gradEnd").value;
+    var s = {r:parseInt(startRgb.slice(1,3),16), g:parseInt(startRgb.slice(3,5),16), b:parseInt(startRgb.slice(5,7),16)};
+    var e = {r:parseInt(endRgb.slice(1,3),16), g:parseInt(endRgb.slice(3,5),16), b:parseInt(endRgb.slice(5,7),16)};
+    var n = state.ledNumber; // LEDs 1..n
+    for(var i=1;i<=n;i++){
+      var c = state.ledColors[i];
+      if(!c || c.off) continue;
+      var t = n>1 ? (i-1)/(n-1) : 0;
+      var r = Math.round(s.r + (e.r-s.r)*t);
+      var g = Math.round(s.g + (e.g-s.g)*t);
+      var b = Math.round(s.b + (e.b-s.b)*t);
+      c.hex = rgbToArgbHex(r,g,b,255);
+    }
+    renderColorStrip(); renderLedEditor(); renderPreview(); renderValidation(); renderJson();
+  }
+
+  function applyRlColor(){
+    var rgb = document.getElementById("rlColor").value;
+    var c = state.ledColors[0];
+    if(!c) return;
+    c.off = false;
+    c.hex = rgbToArgbHex(parseInt(rgb.slice(1,3),16), parseInt(rgb.slice(3,5),16), parseInt(rgb.slice(5,7),16), 255);
+    renderColorStrip(); renderLedEditor(); renderPreview(); renderValidation(); renderJson();
+  }
+
+  function renderGearTable(){
+    var head = document.getElementById("gearTableHead");
+    var body = document.getElementById("gearTableBody");
+    head.innerHTML = "<th></th>";
+    for(var i=0;i<state.ledNumber+1;i++){
+      var th = document.createElement("th"); th.textContent = ledLabel(i); head.appendChild(th);
+    }
+    head.appendChild(document.createElement("th"));
+
+    body.innerHTML = "";
+    state.gearOrder.forEach(function(g){
+      var tr = document.createElement("tr"); tr.className="gear-row";
+      var th = document.createElement("th"); th.textContent = g; tr.appendChild(th);
+      var arr = state.gearRpm[g];
+      for(var i=0;i<state.ledNumber+1;i++){
+        var td = document.createElement("td");
+        var inp = document.createElement("input");
+        inp.type = "number"; inp.step = "5";
+        inp.value = arr[i] !== undefined ? arr[i] : 0;
+        inp.disabled = i > 0 && !!(state.ledColors[i] && state.ledColors[i].off);
+        (function(g,i,inp){
+          inp.addEventListener("input", function(){
+            state.gearRpm[g][i] = inp.value === "" ? 0 : parseInt(inp.value,10);
+            renderPreview(); renderValidation(); renderJson();
+          });
+        })(g,i,inp);
+        td.appendChild(inp);
+        tr.appendChild(td);
+      }
+      var tdActions = document.createElement("td");
+      var actionsWrap = document.createElement("div"); actionsWrap.className="row-actions";
+      var copyBtn = document.createElement("button"); copyBtn.className="small ghost"; copyBtn.textContent="Copy→all"; copyBtn.title="Copy this gear's RPM values to every other gear";
+      copyBtn.addEventListener("click", function(){
+        var src = state.gearRpm[g].slice();
+        state.gearOrder.forEach(function(og){ if(og!==g) state.gearRpm[og] = src.slice(); });
+        renderGearTable(); renderPreview(); renderValidation(); renderJson();
+      });
+      var delBtn = document.createElement("button"); delBtn.className="small ghost"; delBtn.textContent="✕"; delBtn.title="Remove gear";
+      delBtn.addEventListener("click", function(){
+        if(state.gearOrder.length<=1) return;
+        var idx = state.gearOrder.indexOf(g);
+        state.gearOrder.splice(idx,1);
+        delete state.gearRpm[g];
+        renderGearTable(); renderPreviewSelectors(); renderPreview(); renderValidation(); renderJson();
+      });
+      actionsWrap.appendChild(copyBtn); actionsWrap.appendChild(delBtn);
+      tdActions.appendChild(actionsWrap);
+      tr.appendChild(tdActions);
+      body.appendChild(tr);
+    });
+  }
+
+  function setGearPreset(list){
+    var newOrder = list.slice();
+    var newRpm = {};
+    newOrder.forEach(function(g){ newRpm[g] = state.gearRpm[g] ? state.gearRpm[g].slice() : defaultRpmArray(state.ledNumber+1); });
+    state.gearOrder = newOrder;
+    state.gearRpm = newRpm;
+    renderGearTable(); renderPreviewSelectors(); renderPreview(); renderValidation(); renderJson();
+  }
+
+  function addGear(){
+    var input = document.getElementById("newGearName");
+    var name = input.value.trim();
+    if(!name || state.gearOrder.indexOf(name) !== -1) return;
+    state.gearOrder.push(name);
+    state.gearRpm[name] = defaultRpmArray(state.ledNumber+1);
+    input.value = "";
+    renderGearTable(); renderPreviewSelectors(); renderPreview(); renderValidation(); renderJson();
+  }
+
+  function renderPreviewSelectors(){
+    var sel = document.getElementById("prevGear");
+    var prevVal = sel.value;
+    sel.innerHTML = "";
+    state.gearOrder.forEach(function(g){
+      var o = document.createElement("option"); o.value=g; o.textContent=g; sel.appendChild(o);
+    });
+    if(state.gearOrder.indexOf(prevVal) !== -1) sel.value = prevVal;
+
+    var maxRl = 0;
+    state.gearOrder.forEach(function(g){ var v=(state.gearRpm[g]||[])[0]||0; if(v>maxRl) maxRl=v; });
+    var maxRange = Math.max(1000, Math.round((maxRl*1.15)/100)*100 || 9000);
+    var range = document.getElementById("prevRpm");
+    range.max = maxRange;
+  }
+
+  function renderPreview(){
+    var gear = document.getElementById("prevGear").value;
+    var rpm = parseInt(document.getElementById("prevRpm").value,10) || 0;
+    document.getElementById("prevRpmReadout").textContent = rpm;
+    var arr = state.gearRpm[gear] || [];
+    var wrap = document.getElementById("ledStripPreview");
+    var redlineRpm = arr[0] || 0;
+    var atRedline = redlineRpm > 0 && rpm >= redlineRpm;
+    var rlLed = state.ledColors[0];
+    var redlineHex = rlLed && !rlLed.off ? rlLed.hex : null;
+
+    wrap.innerHTML = "";
+    state.ledColors.forEach(function(c,i){
+      var el = document.createElement("div");
+      if(c.off){
+        el.className = "pled gap";
+        wrap.appendChild(el);
+        return;
+      }
+      var threshold = arr[i] || 0;
+      var inRedline = atRedline && redlineHex;
+      var lit = inRedline || (threshold > 0 && rpm >= threshold);
+      el.className = "pled" + (i===0 ? " rl":"") + (lit ? " lit":"");
+      var rgb = argbToCssRgba(inRedline ? redlineHex : c.hex);
+      el.style.background = lit ? rgb : rgb.replace(/[\d.]+\)$/, "0.18)");
+      el.style.setProperty("--glow", rgb);
+      wrap.appendChild(el);
+    });
+
+    var interval = parseInt(state.redlineBlink,10) || 0;
+    var status = document.getElementById("redlineStatus");
+    wrap.classList.toggle("redline", atRedline);
+    status.classList.toggle("active", atRedline);
+    if(!atRedline){
+      status.textContent = redlineRpm > 0 ? "Redline at " + redlineRpm + " rpm" : "No redline RPM set for this gear";
+      setRedlineBlink(0);
+    } else if(interval <= 0){
+      status.textContent = "Redline reached. Blink interval is 0, so the LEDs stay solid.";
+      setRedlineBlink(0);
+    } else if(reduceMotion){
+      status.textContent = "Redline reached. Blinks every " + interval + " ms (not animated: reduced motion is on).";
+      setRedlineBlink(0);
+    } else {
+      status.textContent = "Redline reached. Blinking every " + interval + " ms" +
+        (redlineHex ? " in the redline color." : ". No redline color set, so each LED keeps its own color.");
+      setRedlineBlink(interval);
+    }
+  }
+
+  // Driven by a timer on the persistent strip container, not a CSS animation on the
+  // LEDs, because renderPreview rebuilds the LEDs on every slider tick and would restart it.
+  var reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  var blinkTimer = null, blinkMs = 0;
+  function setRedlineBlink(ms){
+    if(ms === blinkMs) return;
+    blinkMs = ms;
+    if(blinkTimer){ clearInterval(blinkTimer); blinkTimer = null; }
+    var strip = document.getElementById("ledStripPreview");
+    strip.classList.remove("blink-off");
+    if(ms > 0) blinkTimer = setInterval(function(){ strip.classList.toggle("blink-off"); }, ms);
+  }
+
+  function renderValidation(){
+    var items = [];
+    function add(level,msg){ items.push({level:level, msg:msg}); }
+
+    if(isGeneratedLmu()) add("warn","LMU files in the repo are generated from src_data/lmu templates. Put these values in the template, not in data/lmu/.");
+
+    if(!state.carName.trim()) add("error","carName is empty.");
+    else if(PLACEHOLDER_NAMES.indexOf(state.carName.trim()) !== -1) add("error","carName is still the placeholder '"+state.carName.trim()+"'.");
+    else if(state.carName !== state.carName.trim()) add("warn","carName has leading or trailing spaces.");
+
+    if(!state.carId.trim()) add("error","carId is empty — this must match SimHub's DataCorePlugin.CarId.");
+    else if(PLACEHOLDER_IDS.indexOf(state.carId.trim()) !== -1) add("error","carId is still the placeholder '"+state.carId.trim()+"'.");
+    else if(state.carId !== state.carId.trim()) add("warn","carId has leading or trailing spaces. It must match SimHub's CarId exactly, so check whether they belong there.");
+
+    var cls = state.carClass.trim();
+    if(!cls) add("warn","carClass is empty.");
+    else if(cls.toLowerCase() === "manual input needed") add("warn","carClass is a placeholder ('"+cls+"').");
+    else if(CAR_CLASSES.indexOf(cls) === -1){
+      var near = CAR_CLASSES.filter(function(c){ return c.toLowerCase() === cls.toLowerCase(); });
+      if(near.length) add("warn","carClass '"+cls+"' isn't used by any existing car, but '"+near[0]+"' is. Check the capitalisation.");
+    }
+    if(!state.simId.trim()) add("error","Sim folder is empty.");
+
+    var ln = parseInt(state.ledNumber,10);
+    if(!Number.isInteger(ln) || ln<1 || ln>40) add("error","ledNumber must be an integer between 1 and 40.");
+
+    var blink = parseInt(state.redlineBlink,10);
+    if(!Number.isInteger(blink) || blink<0) add("error","redlineBlinkInterval must be a non-negative integer.");
+
+    var expectedLen = ln+1;
+    if(state.ledColors.length !== expectedLen) add("error","ledColor length ("+state.ledColors.length+") does not match ledNumber+1 ("+expectedLen+").");
+    else add("ok","ledColor length matches ledNumber+1.");
+
+    var colorsOk = true;
+    state.ledColors.forEach(function(c,i){
+      var hex = c.off ? "#00000000" : c.hex;
+      if(!/^#([0-9A-Fa-f]{8})$/.test(hex)){ colorsOk=false; add("error","LED "+ledLabel(i)+" color '"+hex+"' is not a valid 8-digit hex (#AARRGGBB)."); }
+    });
+    if(colorsOk) add("ok","All LED colors are valid hex values.");
+
+    if(state.gearOrder.length===0) add("error","No gears defined.");
+
+    var gearLenOk = true;
+    var negative = [], allZero = [], noRedline = [], overRedline = [], irregular = [];
+    var layoutGears = {}; // layout -> [gear,…]
+    state.gearOrder.forEach(function(g){
+      var arr = state.gearRpm[g]||[];
+      if(arr.length !== expectedLen){ gearLenOk=false; add("error","Gear '"+g+"' RPM array length ("+arr.length+") does not match ledNumber+1 ("+expectedLen+")."); }
+      if(arr.some(function(v){ return v < 0; })) negative.push(g);
+      if(arr.every(function(v){ return !v; })){ allZero.push(g); return; }
+      var ledMax = Math.max.apply(null, [0].concat(arr.slice(1)));
+      if(!(arr[0] > 0)) noRedline.push(g);
+      else if(ledMax > arr[0]) overRedline.push(g + " (" + ledMax + " > " + arr[0] + ")");
+      var layout = classifyLayout(arr);
+      if(layout === "irregular") irregular.push(g);
+      else if(layout !== "trivial") (layoutGears[layout] = layoutGears[layout] || []).push(g);
+    });
+    if(gearLenOk) add("ok","All gear RPM arrays match ledNumber+1.");
+    if(negative.length) add("error","Negative RPM values in gear " + negative.join(", ") + ".");
+    if(allZero.length) add("warn","No RPM values at all in gear " + allZero.join(", ") + ".");
+    if(noRedline.length) add("warn","No redline (RL) RPM in gear " + noRedline.join(", ") + ".");
+    if(overRedline.length) add("warn","An LED threshold is above the redline (RL) in gear " + overRedline.join(", ") + ".");
+    if(irregular.length) add("warn","LED thresholds in gear " + irregular.join(", ") + " don't follow a left→right, right→left or mirrored pattern. Check for typos.");
+    var layouts = Object.keys(layoutGears);
+    if(layouts.length === 1) add("ok","LED layout: " + LAYOUT_LABELS[layouts[0]] + ".");
+    else if(layouts.length > 1) add("warn","Gears use different LED layouts: " + layouts.map(function(l){ return LAYOUT_LABELS[l] + " (gear " + layoutGears[l].join(", ") + ")"; }).join("; ") + ". Usually every gear uses the same one.");
+
+    if(!slugify(state.carId)) add("error","Can't derive a file name from carId.");
+    else add("ok","File name: "+slugify(state.carId)+".json");
+
+    var list = document.getElementById("validationList");
+    list.innerHTML = "";
+    items.forEach(function(it){
+      var li = document.createElement("li");
+      var icon = document.createElement("span");
+      icon.className = "vicon " + it.level;
+      icon.textContent = it.level==="ok" ? "✓" : it.level==="warn" ? "!" : "✕";
+      var span = document.createElement("span"); span.textContent = it.msg;
+      li.appendChild(icon); li.appendChild(span);
+      list.appendChild(li);
+    });
+  }
+
+  function renderJson(){
+    document.getElementById("jsonOut").textContent = buildJsonText();
+  }
+
+  function renderAll(){
+    syncFieldsFromState();
+    renderPathPreview();
+    renderColorStrip();
+    renderLedEditor();
+    renderGearTable();
+    renderPreviewSelectors();
+    renderPreview();
+    renderValidation();
+    renderJson();
+  }
+
+  // ---------- wire static controls ----------
+  bindField("fSim","simId");
+  bindPicker("fSimSelect","fSim","simId",SIM_FOLDERS);
+  bindPicker("fCarClassSelect","fCarClass","carClass",CAR_CLASSES);
+  bindField("fCarName","carName");
+  bindField("fCarId","carId");
+  bindField("fCarClass","carClass");
+  bindField("fBlink","redlineBlink","int");
+
+  document.getElementById("btnApplyGradient").addEventListener("click", applyGradient);
+  document.getElementById("rlColor").addEventListener("input", applyRlColor);
+
+  document.getElementById("presetShort").addEventListener("click", function(){ setGearPreset(["R","N","1","2","3","4","5","6"]); });
+  document.getElementById("presetLong").addEventListener("click", function(){ setGearPreset(["R","N","1","2","3","4","5","6","7","8"]); });
+  document.getElementById("btnAddGear").addEventListener("click", addGear);
+  document.getElementById("newGearName").addEventListener("keydown", function(e){ if(e.key==="Enter") addGear(); });
+
+  document.getElementById("prevGear").addEventListener("change", renderPreview);
+  document.getElementById("prevRpm").addEventListener("input", renderPreview);
+
+  document.getElementById("btnCopy").addEventListener("click", function(){
+    var text = buildJsonText();
+    var btn = document.getElementById("btnCopy");
+    function done(ok){ btn.textContent = ok ? "Copied!" : "Copy failed — select & copy manually"; setTimeout(function(){ btn.textContent="Copy JSON"; }, 1600); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){done(true);}, function(){done(false);});
+    } else {
+      try{
+        var ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select();
+        document.execCommand("copy"); document.body.removeChild(ta); done(true);
+      }catch(e){ done(false); }
+    }
+  });
+
+  document.getElementById("btnExample").addEventListener("click", function(){
+    importFromText(EXAMPLE_TEXT);
+    state.simId = "assettocorsacompetizione";
+    renderAll();
+  });
+  document.getElementById("btnBlank").addEventListener("click", function(){
+    loadBlank();
+    state.simId = state.simId || "assettocorsacompetizione";
+    renderAll();
+  });
+  document.getElementById("dismissBanner").addEventListener("click", function(){
+    document.getElementById("exampleBanner").hidden = true;
+  });
+
+  document.getElementById("btnImport").addEventListener("click", function(){
+    document.getElementById("importErr").hidden = true;
+    document.getElementById("importText").value = "";
+    document.getElementById("importBackdrop").hidden = false;
+  });
+  document.getElementById("importCancel").addEventListener("click", function(){
+    document.getElementById("importBackdrop").hidden = true;
+  });
+  document.getElementById("importParse").addEventListener("click", function(){
+    var errEl = document.getElementById("importErr");
+    try{
+      importFromText(document.getElementById("importText").value);
+      document.getElementById("importBackdrop").hidden = true;
+      document.getElementById("exampleBanner").hidden = true;
+      renderAll();
+    }catch(e){
+      errEl.textContent = e.message;
+      errEl.hidden = false;
+    }
+  });
+
+  // ---------- boot ----------
+  importFromText(EXAMPLE_TEXT);
+  state.simId = "assettocorsacompetizione";
+  renderAll();
+})();
+</script>
