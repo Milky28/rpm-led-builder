@@ -171,6 +171,7 @@
   .copyrow{display:flex; gap:8px; margin-top:10px;}
   .contribute-steps{margin-top:16px; padding-top:14px; border-top:1px dashed var(--border); font-size:.74rem; color:var(--text-dim); line-height:1.6;}
   .contribute-steps ol{margin:6px 0 0; padding-left:18px;}
+  .contribute-steps .tip-block{margin:8px 0 0; padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--text);}
   .contribute-steps code{font-family:var(--font-mono); background:var(--surface-2); padding:1px 5px; border-radius:4px; font-size:.72rem;}
 
   .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50;}
@@ -416,11 +417,13 @@
       <pre id="diffOut" hidden></pre>
       <div class="copyrow">
         <button class="primary small" id="btnCopy" style="flex:1;">Copy JSON</button>
+        <button class="small" id="btnDownload" style="flex:1;">Download .json</button>
         <button class="small" id="btnGithub" style="flex:1;">Open on GitHub</button>
       </div>
       <div class="gh-hint" id="githubHint"></div>
       <div class="contribute-steps">
         This tool only produces the JSON text. It never submits anything for you.
+        <p class="tip-block"><b>Try it on your wheel first (ATSR):</b> download the file and put it in <code>&lt;SimHub folder&gt;\_ATSR_DevelopmentData\rpm_data\</code> (no game subfolder), keeping the downloaded name. Turn on <b>Developer Mode</b> in ATSR's RPM settings, or switch it off and on to reload; restart SimHub if the lights don't change. Delete the file when you're done, or ATSR keeps using it.</p>
         <ol>
           <li><b>Open on GitHub</b> opens the right page in a new tab: a pre-filled new file for a new car, or the edit page for an existing one (the JSON is copied first so you can paste it over the old contents). You can also go to <code id="pathLine2">data/…/….json</code> yourself.</li>
           <li>GitHub creates a fork for you if needed. Review the file, choose <b>Propose changes</b>, then open the pull request.</li>
@@ -833,6 +836,38 @@
   // ATSR's own layout rule, applied to the last gear's LED values (gaps included):
   // an exact mirror is "side to centre", anything else "left to right", and a row that is both
   // non-decreasing (ignoring 0s) and an exact mirror makes ATSR reject the file.
+  // Cars ATSR handles with built-in behaviour, matched by exact carId in any game (ATSR Hub EVO, August 2026).
+  var ATSR_BMW_LMDH = ["bmwlmdh","BMW M Hybrid V8","BMW M Team WRT 2024","Hyper_BMW M Team WRT 2025","Hyper_BMW M Team WRT 2026_15",
+    "Hyper_BMW M Team WRT 2026_20","Hyper_BMWMH Custom Team 2026_397","Hyper_BMWMH Custom Team 2025_397","Hyper_BMWMH Custom Team 2025","Hyper_BMWMH Custom Team 2024"];
+  var ATSR_SECOND_STAGE = {
+    "Chevrolet Corvette Z06 GT3.R": "at 7900 rpm in #FF6495ED",
+    "amvantagegt4": "at 6900 rpm in #FFFF0000",
+    "amvantageevogt3": "Vantage GT3 style, 6750-6900 rpm by gear, in #FF0000FF",
+    "bmwlmdh": "at 7900 rpm in #FF0000FF",
+    "bmwm2g87": "Ferrari GT3 style at 7000 rpm in #FFFF0000",
+    "chevyvettez06rgt3": "at 7750 rpm in #FF0000FF",
+    "ferrari296gt3": "Ferrari GT3 style, 7450-8000 rpm by gear, in #FFFF0000",
+    "ks_ferrari_488_gt3": "Ferrari GT3 style at 6900 rpm in #FFFF0000",
+    "fordmustanggt4": "7500 rpm (10000 in R and N) in #FFFF0000",
+    "mclaren720sgt3": "McLaren 720S style, 6975-8000 rpm by gear, in #FF0000FF"
+  };
+  var ATSR_LMU_GROUPS = [
+    ["LMU Aston Martin GT3", ["Aston Martin Vantage AMR LMGT","GT3_Heart of Racing Team 2024","GT3_D'Station Racing 2024","GT3_AMR GT3 Custom Team","GT3_Heart of Racing Team 2025","GT3_Racing Spirit of Léman 2025","GT3_Heart of Racing Team 2026_23","GT3_Heart of Racing Team 2026_27","GT3_AMR GT3 Custom Team 2025","GT3_AMR GT3 Custom Team 2025_397","GT3_AMR GT3 Custom Team 2026_397"]],
+    ["LMU McLaren GT3 (McLaren 720S style)", ["McLaren 720S LMGT3 Evo","GT3_United Autosports 2024","Inception Racing 2024","GT3_McLaren Custom Team 2024","GT3_United Autosports 2025","GT3_United Autosports 2026","GT3_Garage 59 2026_10","GT3_Garage 59 2026_58","GT3_McLaren Custom Team 2025","GT3_McLaren Custom Team 2026_397","GT3_Logitech G Challenge_1","GT3_Logitech G Challenge_2","GT3_Logitech G Challenge_3","GT3_Logitech G Challenge_4","GT3_Logitech G Challenge_5","GT3_Logitech G Challenge_6","GT3_Logitech G Challenge_7","GT3_Logitech G Challenge_8","GT3_Logitech G Challenge_9","GT3_Logitech G Challenge_10","GT3_Logitech G Challenge_11","GT3_Logitech G Challenge_12"]],
+    ["LMU Cadillac hypercar", ["Cadillac V-Series.R","Hyper_Cadillac Hertz Team Jota 2025","Hyper_Cadillac Whelen 2025","Hyper_Cadillac WTR 2025","Hyper_Cadillac Hertz Team Jota 2026_12","Hyper_Cadillac Hertz Team Jota 2026_38","Hyper_VLMDH Custom Team 2025","Hyper_VLMDH Custom Team 2026_397"]],
+    ["LMU Ford GT3", ["Ford Mustang LMGT3","GT3_Proton Racing 2024","GT3_Mustang Custom Team 2024","GT3_Proton Competition 2025","GT3_Proton Competition 2026_77","GT3_Proton Competition 2026_88","GT3_Mustang Custom Team 2025","GT3_Mustang Custom Team 2026_397"]]
+  ];
+  function atsrBuiltIn(carId){
+    var msgs = [];
+    if(!carId) return msgs;
+    if(ATSR_BMW_LMDH.indexOf(carId) !== -1)
+      msgs.push("ATSR draws carId '" + carId + "' with its own built-in BMW LMDh light pattern, in every game with this carId. It only uses this file's RPM values and redline; the colors and layout here are ignored.");
+    var stage = ATSR_SECOND_STAGE[carId];
+    if(!stage) ATSR_LMU_GROUPS.forEach(function(g){ if(!stage && g[1].indexOf(carId) !== -1) stage = g[0]; });
+    if(stage) msgs.push("ATSR adds a built-in second redline stage for carId '" + carId + "' (" + stage + "), in every game with this carId. This file's redline is the first stage.");
+    return msgs;
+  }
+
   function atsrLayout(values){
     var ascending = true;
     for(var i=1;i<values.length;i++){ if(values[i] !== 0 && values[i] < values[i-1]) ascending = false; }
@@ -1347,6 +1382,8 @@
     });
     if(alwaysLit.length) add("warn","These LEDs have a color but an RPM of 0, so ATSR lights them all the time: gear " + alwaysLit.join("; ") + ". Set an RPM, or mark them as gaps.");
 
+    atsrBuiltIn(state.carId.trim()).forEach(function(msg){ add("warn", msg); });
+
     var lastGear = state.gearOrder[state.gearOrder.length-1];
     var lastRow = state.gearRpm[lastGear] || [];
     if(lastGear !== undefined && !lastRow.every(function(v){ return !v; })){
@@ -1449,6 +1486,18 @@
     var btn = document.getElementById("btnCopy");
     function done(ok){ btn.textContent = ok ? "Copied!" : "Copy failed — select & copy manually"; setTimeout(function(){ btn.textContent="Copy JSON"; }, 1600); }
     copyText(buildJsonText()).then(function(){done(true);}, function(){done(false);});
+  });
+
+  // Named after the carId, which is the file name the repo and ATSR look for.
+  document.getElementById("btnDownload").addEventListener("click", function(){
+    var blob = new Blob([buildJsonText()], {type: "application/json"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (slugify(state.carId) || "car") + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
   });
 
   // ---------- Lovely Car Data repo (read-only, public files on GitHub) ----------
