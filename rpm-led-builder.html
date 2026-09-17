@@ -178,6 +178,50 @@
   .modal textarea{width:100%; min-height:220px; font-family:var(--font-mono); font-size:.72rem; resize:vertical;}
   .modal .modal-actions{display:flex; justify-content:flex-end; gap:8px;}
   .modal-err{color:var(--danger); font-size:.76rem;}
+  button:disabled{opacity:.45; cursor:default;}
+  button:disabled:hover{border-color:var(--border);}
+  .action-sep{width:1px; align-self:stretch; background:var(--border); margin:0 2px;}
+  .notice.info{background:var(--accent-soft); border-color:var(--accent);}
+  .notice ul{margin:4px 0 0; padding-left:18px;}
+  .notice .notice-actions{margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;}
+  .tip{font-size:.7rem; color:var(--text-dim);}
+
+  .generator{margin-top:16px; padding-top:14px; border-top:1px dashed var(--border);}
+  .generator h3{font-size:.95rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); margin-bottom:10px;}
+  .gen-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px;}
+  .gen-footer{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px;}
+  .gen-summary{flex:1 1 220px; font-size:.74rem; color:var(--text-dim); font-family:var(--font-mono);}
+
+  .sweep-row{display:flex; gap:10px; align-items:center; margin:4px 0 8px;}
+  .sweep-all{font-size:.74rem; margin:0; text-transform:none; letter-spacing:0; font-weight:400;}
+  .pled.clear{outline:1px dashed var(--text-dim); outline-offset:-1px;}
+
+  .vicon.info{background:var(--accent); color:var(--accent-text);}
+
+  .out-tabs{display:flex; gap:4px; margin-bottom:6px;}
+  .out-tab{padding:4px 10px; font-size:.72rem; border-radius:6px; background:transparent;}
+  .out-tab[aria-selected="true"]{background:var(--accent-soft); border-color:var(--accent); color:var(--text);}
+  pre#diffOut{
+    font-family:var(--font-mono); font-size:.7rem; line-height:1.5; background:var(--code-bg); color:var(--code-text);
+    border:1px solid var(--code-border); border-radius:0 0 8px 8px; padding:12px 0; margin:0; max-height:340px; overflow:auto; white-space:pre;
+  }
+  #diffOut .dl{display:block; padding:0 12px;}
+  #diffOut .dl.add{background:rgba(74,215,149,.16); color:#b8f5d6;}
+  #diffOut .dl.del{background:rgba(255,122,114,.16); color:#ffc9c4;}
+  #diffOut .dl.same{opacity:.55;}
+  #diffOut .dl.skip{opacity:.5; font-style:italic;}
+  .gh-hint{font-size:.7rem; color:var(--text-dim); margin-top:6px; min-height:1em;}
+
+  .repo-filters{display:flex; gap:10px; flex-wrap:wrap;}
+  .repo-filters .field{flex:1 1 160px;}
+  .repo-status{font-size:.76rem; color:var(--text-dim); min-height:1.2em;}
+  .repo-status.err{color:var(--danger);}
+  .repo-list{list-style:none; margin:0; padding:0; overflow-y:auto; flex:1 1 auto; min-height:120px; border:1px solid var(--border); border-radius:10px;}
+  .repo-list li + li{border-top:1px solid var(--border);}
+  .repo-list button{width:100%; text-align:left; border:0; border-radius:0; background:transparent; padding:8px 12px; display:flex; flex-direction:column; gap:2px;}
+  .repo-list button:hover, .repo-list button:focus-visible{background:var(--surface-2);}
+  .repo-list .rc-name{font-weight:600; font-size:.82rem;}
+  .repo-list .rc-meta{font-family:var(--font-mono); font-size:.68rem; color:var(--text-dim); font-weight:400;}
   footer{max-width:1320px; margin:28px auto 0; font-size:.72rem; color:var(--text-dim); text-align:center;}
   footer a{color:var(--accent);}
 </style>
@@ -188,15 +232,23 @@
     <div class="sub">unofficial contribution helper for <a href="https://github.com/Lovely-Sim-Racing/lovely-car-data" style="color:var(--accent)">Lovely Car Data</a> · file format v2.0.0</div>
   </div>
   <div class="actions">
-    <button class="ghost small" id="btnExample">Load example</button>
-    <button class="ghost small" id="btnBlank">Start blank</button>
+    <button class="ghost small" id="btnUndo" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
+    <button class="ghost small" id="btnRedo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↷ Redo</button>
+    <span class="action-sep" aria-hidden="true"></span>
+    <button class="primary small" id="btnRepo">Load from repo</button>
     <button class="ghost small" id="btnImport">Import JSON</button>
+    <button class="ghost small" id="btnBlank">Start blank</button>
+    <button class="ghost small" id="btnExample">Load example</button>
   </div>
 </div>
 
 <div class="wrap">
+  <div class="banner" id="draftBanner" hidden>
+    <span id="draftBannerText">Restored your unsaved work.</span>
+    <button class="small" id="dismissDraftBanner">Got it</button>
+  </div>
   <div class="banner" id="exampleBanner">
-    <span>Showing example data (McLaren 720S GT3 EVO, Assetto Corsa Competizione) so you can see the tool working. Drag the preview slider past 7200 rpm to see the redline blink. Edit any field, or click <b>Start blank</b> to begin a new car from scratch, or <b>Import JSON</b> to edit an existing file.</span>
+    <span>Showing example data (McLaren 720S GT3 EVO, Assetto Corsa Competizione) so you can see the tool working. Press <b>▶ Rev sweep</b> in the preview to watch it light up. Use <b>Load from repo</b> to fix an existing car, or <b>Start blank</b> for a new one. Your work is saved in this browser as you go.</span>
     <button class="small" id="dismissBanner">Got it</button>
   </div>
 
@@ -235,6 +287,8 @@
       <div class="notice" id="lmuNotice" hidden>
         <b>LMU files are generated.</b> In Lovely Car Data, <code>data/lmu/*.json</code> is built from the templates in <code>src_data/lmu/*.jsonc</code> by <code>scripts/build_profiles.py</code>, and every build overwrites those files. Use this tool to work out the values, then put them in the matching template instead of submitting this file.
       </div>
+      <div class="notice info" id="originNotice" hidden></div>
+      <div class="notice" id="importNotes" hidden></div>
     </section>
 
     <section class="panel colors">
@@ -268,8 +322,65 @@
         <button class="small" id="presetShort">Set gears: R,N,1–6</button>
         <button class="small" id="presetLong">Set gears: R,N,1–8</button>
         <div class="add-gear">
-          <input type="text" id="newGearName" placeholder="e.g. 9">
+          <input type="text" id="newGearName" placeholder="e.g. 9" aria-label="New gear name">
           <button class="small" id="btnAddGear">Add gear</button>
+        </div>
+        <span class="tip">Tip: paste a row copied from a spreadsheet into any cell. Several rows fill the gears below it.</span>
+      </div>
+
+      <div class="generator">
+        <h3>Fill RPM values</h3>
+        <div class="gen-grid">
+          <div class="field">
+            <label for="genMode">Spacing</label>
+            <select id="genMode">
+              <option value="even">Even (first → last)</option>
+              <option value="step">Fixed step</option>
+              <option value="percent">% of redline</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="genLayout">Layout</label>
+            <select id="genLayout">
+              <option value="rising">Left → right</option>
+              <option value="falling">Right → left</option>
+              <option value="outsideIn">Mirrored, outer LEDs first</option>
+              <option value="insideOut">Mirrored, centre LEDs first</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="genRedline">Redline (RL) rpm</label>
+            <input type="number" id="genRedline" min="0" step="25" value="8000">
+          </div>
+          <div class="field gen-even">
+            <label for="genFirst">First LED rpm</label>
+            <input type="number" id="genFirst" min="0" step="25" value="6000">
+          </div>
+          <div class="field gen-even">
+            <label for="genLast">Last LED rpm</label>
+            <input type="number" id="genLast" min="0" step="25" value="7800">
+          </div>
+          <div class="field gen-step" hidden>
+            <label for="genStep">Step (rpm)</label>
+            <input type="number" id="genStep" min="1" step="5" value="150">
+          </div>
+          <div class="field gen-percent" hidden>
+            <label for="genPctFirst">First LED %</label>
+            <input type="number" id="genPctFirst" min="0" max="150" step="0.5" value="75">
+          </div>
+          <div class="field gen-percent" hidden>
+            <label for="genPctLast">Last LED %</label>
+            <input type="number" id="genPctLast" min="0" max="150" step="0.5" value="98">
+          </div>
+          <div class="field">
+            <label for="genTarget">Apply to</label>
+            <select id="genTarget"></select>
+          </div>
+        </div>
+        <div class="gen-footer">
+          <span class="gen-summary" id="genSummary"></span>
+          <button class="small" id="btnGenFromGear" title="Fill these settings from the gear selected in the live preview">Read settings from preview gear</button>
+          <button class="primary small" id="btnGenerate">Fill</button>
         </div>
       </div>
     </section>
@@ -283,26 +394,36 @@
         </div>
         <div class="rpm-readout" id="prevRpmReadout">0</div>
       </div>
-      <input type="range" id="prevRpm" min="0" max="9000" step="25" value="0">
+      <input type="range" id="prevRpm" min="0" max="9000" step="25" value="0" aria-label="Preview RPM">
       <div class="led-strip-preview" id="ledStripPreview"></div>
       <div class="redline-status" id="redlineStatus" aria-live="polite"></div>
-      <p class="preview-caption">Illustrative only — drag the slider to see which LEDs would be lit at that RPM in the selected gear.</p>
+      <div class="sweep-row">
+        <button class="small" id="btnSweep">▶ Rev sweep</button>
+        <label class="checkline sweep-all"><input type="checkbox" id="sweepAll" checked> all gears</label>
+      </div>
+      <p class="preview-caption">Illustrative only. Drag the slider or play a rev sweep to see which LEDs light at each RPM. At the redline this preview switches the whole strip to the RL color; how the flash really looks depends on the dashboard.</p>
 
       <h2 style="margin-top:18px;">Validation</h2>
       <ul class="validation-list" id="validationList"></ul>
 
       <h2>JSON output</h2>
+      <div class="out-tabs" role="tablist" id="outTabs" hidden>
+        <button role="tab" class="out-tab" id="tabJson" aria-selected="true">JSON</button>
+        <button role="tab" class="out-tab" id="tabDiff" aria-selected="false">Changes</button>
+      </div>
       <div class="path-line" id="pathLine">data/…/….json</div>
       <pre id="jsonOut"></pre>
+      <pre id="diffOut" hidden></pre>
       <div class="copyrow">
         <button class="primary small" id="btnCopy" style="flex:1;">Copy JSON</button>
+        <button class="small" id="btnGithub" style="flex:1;">Open on GitHub</button>
       </div>
+      <div class="gh-hint" id="githubHint"></div>
       <div class="contribute-steps">
-        This tool only produces the JSON text — it doesn't submit anything for you.
+        This tool only produces the JSON text. It never submits anything for you.
         <ol>
-          <li>Copy the JSON above.</li>
-          <li>On GitHub, open <code>lovely-car-data</code> and go to <code id="pathLine2">data/…/….json</code>. Edit the existing file with the pencil icon, or use <b>Add file → Create new file</b> in the sim folder for a new car. GitHub creates a fork for you if needed.</li>
-          <li>Paste the JSON, choose <b>Propose changes</b>, then open the pull request.</li>
+          <li><b>Open on GitHub</b> opens the right page in a new tab: a pre-filled new file for a new car, or the edit page for an existing one (the JSON is copied first so you can paste it over the old contents). You can also go to <code id="pathLine2">data/…/….json</code> yourself.</li>
+          <li>GitHub creates a fork for you if needed. Review the file, choose <b>Propose changes</b>, then open the pull request.</li>
         </ol>
         The output already uses the repo's layout (arrays on one line). If you commit from a local clone with the repo's pre-commit hooks installed, check the diff: the JSON prettifier hook may spread the arrays over many lines.
         Note: this tool can't edit the optional <code>carSettings</code> field (advanced, rarely used). If an imported file has it, or other fields like <code>_schemaVersion</code>, they're written back unchanged.
@@ -322,6 +443,29 @@
     <div class="modal-actions">
       <button class="ghost" id="importCancel">Cancel</button>
       <button class="primary" id="importParse">Load into editor</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="repoBackdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="repoTitle">
+    <h2 id="repoTitle" style="margin-bottom:0;">Load a car from Lovely Car Data</h2>
+    <p style="font-size:.78rem; color:var(--text-dim);">Reads the public files on the repo's <code>main</code> branch. Nothing is sent anywhere.</p>
+    <div class="repo-filters">
+      <div class="field">
+        <label for="repoSim">Sim</label>
+        <select id="repoSim"></select>
+      </div>
+      <div class="field" style="flex:2;">
+        <label for="repoSearch">Search</label>
+        <input type="text" id="repoSearch" placeholder="Car name or ID" autocomplete="off">
+      </div>
+    </div>
+    <div class="repo-status" id="repoStatus" aria-live="polite"></div>
+    <ul class="repo-list" id="repoList"></ul>
+    <div class="modal-actions">
+      <button class="ghost" id="repoRetry" hidden>Retry</button>
+      <button class="ghost" id="repoCancel">Close</button>
     </div>
   </div>
 </div>
@@ -423,7 +567,9 @@
     ledColors: [],   // [{hex:'#AARRGGBB', off:bool}]
     gearOrder: [],   // ['R','N','1',...]
     gearRpm: {},     // {gear: [int,...]}
-    extra: {}        // imported keys this editor doesn't handle (_schemaVersion, carSettings, …), written back unchanged
+    extra: {},       // imported keys this editor doesn't handle (_schemaVersion, carSettings, …), written back unchanged
+    origin: null,    // {path:'sim/file.json', baseline:'…'} when loaded from the repo; baseline = this tool's output right after loading
+    importNotes: []  // what import had to adjust to fit the file into the editor
   };
 
   var KNOWN_KEYS = ["carName","carId","carClass","ledNumber","redlineBlinkInterval","ledColor","ledRpm"];
@@ -512,6 +658,8 @@
     state.ledNumber = BLANK_LED_NUMBER;
     state.redlineBlink = 0;
     state.extra = {};
+    state.origin = null;
+    state.importNotes = [];
     state.gearOrder = ["R","N","1","2","3","4","5","6"];
     state.gearRpm = {};
     state.gearOrder.forEach(function(g){ state.gearRpm[g] = defaultRpmArray(BLANK_LED_NUMBER+1); });
@@ -539,41 +687,76 @@
     try{ obj = JSON.parse(cleaned); }
     catch(e){ throw new Error("Could not parse JSON: " + e.message); }
 
-    var ledNumber = obj.ledNumber !== undefined ? obj.ledNumber : BLANK_LED_NUMBER;
+    if(!obj || typeof obj !== "object" || Array.isArray(obj)) throw new Error("Expected a JSON object like { \"carName\": … }.");
+    var notes = [];
+
+    var ledNumber = parseInt(obj.ledNumber, 10);
+    if(!(ledNumber >= 1)){
+      ledNumber = BLANK_LED_NUMBER;
+      notes.push("ledNumber was missing or invalid, so it was set to " + BLANK_LED_NUMBER + ".");
+    } else if(ledNumber > 40){
+      ledNumber = 40;
+      notes.push("ledNumber was above 40, so it was capped at 40.");
+    }
     var expectedLen = ledNumber + 1;
 
     var colorsSrc = Array.isArray(obj.ledColor) ? obj.ledColor : [];
-    var colors = [];
-    for(var i=0;i<expectedLen;i++){
-      var raw = colorsSrc[i];
-      if(raw === undefined){ colors.push({hex:"#FFFFFFFF", off:false}); continue; }
-      var argb = resolveAnyColorToArgb(raw);
-      colors.push({hex: argb, off: argb === "#00000000"});
+    if(colorsSrc.length !== expectedLen){
+      notes.push("ledColor had " + colorsSrc.length + " entries but ledNumber " + ledNumber + " needs " + expectedLen + ", so it was " +
+        (colorsSrc.length < expectedLen ? "padded with white." : "trimmed."));
     }
 
     var gearOrder = extractGearOrder(cleaned);
     var rpmObj = (obj.ledRpm && obj.ledRpm[0]) ? obj.ledRpm[0] : {};
     if(!gearOrder) gearOrder = Object.keys(rpmObj);
 
-    var gearRpm = {};
+    var gearRpm = {}, badLen = [], badVals = [];
     gearOrder.forEach(function(g){
       var arr = Array.isArray(rpmObj[g]) ? rpmObj[g].slice() : [];
+      if(arr.length !== expectedLen) badLen.push(g + " (" + arr.length + ")");
       var na = [];
-      for(var i=0;i<expectedLen;i++){ na.push(typeof arr[i] === "number" ? arr[i] : (parseInt(arr[i],10)||0)); }
+      for(var i=0;i<expectedLen;i++){
+        var v = arr[i];
+        if(typeof v === "number"){ na.push(Math.round(v)); continue; }
+        if(v !== undefined && badVals.indexOf(g) === -1) badVals.push(g);
+        na.push(parseInt(v,10)||0);
+      }
       gearRpm[g] = na;
     });
-    if(gearOrder.length === 0){ gearOrder = ["1"]; gearRpm["1"] = defaultRpmArray(expectedLen); }
+    if(badLen.length) notes.push("RPM lists with the wrong length (needs " + expectedLen + ") were padded with 0 or trimmed in gear " + badLen.join(", ") + ".");
+    if(badVals.length) notes.push("Non-numeric RPM values were converted to numbers in gear " + badVals.join(", ") + ".");
+    if(gearOrder.length === 0){ gearOrder = ["1"]; gearRpm["1"] = defaultRpmArray(expectedLen); notes.push("No ledRpm gears were found, so an empty gear 1 was added."); }
+
+    // A transparent LED is only a gap when no gear gives it an RPM; otherwise it's a real (invisible) LED.
+    var colors = [], changedColors = [];
+    for(var i=0;i<expectedLen;i++){
+      var raw = colorsSrc[i];
+      if(raw === undefined){ colors.push({hex:"#FFFFFFFF", off:false}); continue; }
+      var argb = resolveAnyColorToArgb(String(raw));
+      if(argb !== String(raw)) changedColors.push(String(raw) + " → " + argb);
+      var hasRpm = i > 0 && gearOrder.some(function(g){ return gearRpm[g][i] > 0; });
+      colors.push({hex: argb, off: argb === "#00000000" && !hasRpm});
+    }
+    if(changedColors.length) notes.push("Colors were converted to #AARRGGBB: " + changedColors.join(", ") + ".");
+
+    var blink = obj.redlineBlinkInterval;
+    if(Array.isArray(blink)){
+      notes.push("redlineBlinkInterval was a list [" + blink.join(",") + "]; this editor keeps one value, so it used " + (parseInt(blink[0],10)||0) + ".");
+      blink = blink[0];
+    }
 
     state.carName = obj.carName || "";
     state.carId = obj.carId || "";
     state.carClass = obj.carClass || "";
     state.ledNumber = ledNumber;
-    state.redlineBlink = obj.redlineBlinkInterval !== undefined ? obj.redlineBlinkInterval : 0;
+    state.redlineBlink = parseInt(blink,10) || 0;
     state.ledColors = colors;
     state.gearOrder = gearOrder;
     state.gearRpm = gearRpm;
     state.extra = {};
     Object.keys(obj).forEach(function(k){ if(KNOWN_KEYS.indexOf(k) === -1) state.extra[k] = obj[k]; });
+    state.origin = null;
+    state.importNotes = notes;
     selectedLed = 0;
   }
 
@@ -604,6 +787,12 @@
     var slug = slugify(state.carId);
     var sim = slugify(state.simId) || "{sim}";
     return "data/" + sim + "/" + (slug || "{car-id}") + ".json";
+  }
+
+  // Path relative to the repo's data/ folder (the form manifest.json uses), or "" if incomplete.
+  function repoRelPath(){
+    var slug = slugify(state.carId), sim = slugify(state.simId);
+    return slug && sim ? sim + "/" + slug + ".json" : "";
   }
 
   // LMU car files in the repo are build output (src_data/lmu templates → scripts/build_profiles.py);
@@ -672,20 +861,57 @@
     document.getElementById("pathLine").textContent = p;
     document.getElementById("pathLine2").textContent = p;
     document.getElementById("lmuNotice").hidden = !isGeneratedLmu();
+    renderNotices();
+    renderGithubButton();
+  }
+
+  function renderNotices(){
+    var origin = document.getElementById("originNotice");
+    origin.hidden = !state.origin;
+    if(state.origin){
+      origin.innerHTML = "";
+      var b = document.createElement("b"); b.textContent = "Editing data/" + state.origin.path;
+      origin.appendChild(b);
+      origin.appendChild(document.createTextNode(" from the repo's main branch. The Changes tab in the JSON output shows what you've changed."));
+    }
+    var box = document.getElementById("importNotes");
+    var notes = state.importNotes || [];
+    box.hidden = !notes.length;
+    if(!notes.length) return;
+    box.innerHTML = "";
+    var head = document.createElement("b"); head.textContent = "Import adjusted this file to fit the format:";
+    var ul = document.createElement("ul");
+    notes.forEach(function(n){ var li = document.createElement("li"); li.textContent = n; ul.appendChild(li); });
+    var actions = document.createElement("div"); actions.className = "notice-actions";
+    var ok = document.createElement("button"); ok.className = "small"; ok.textContent = "Got it";
+    ok.addEventListener("click", function(){ state.importNotes = []; renderNotices(); renderJson(); });
+    actions.appendChild(ok);
+    box.appendChild(head); box.appendChild(ul); box.appendChild(actions);
   }
 
   function ledLabel(i){ return i === 0 ? "RL" : String(i); }
+
+  function selectLed(i, focus){
+    selectedLed = clamp(i, 0, state.ledColors.length-1);
+    renderColorStrip(); renderLedEditor();
+    if(focus){ var chip = document.getElementById("ledStripEdit").children[selectedLed]; if(chip) chip.focus(); }
+  }
 
   function renderColorStrip(){
     var rl = state.ledColors[0];
     if(rl && !rl.off) document.getElementById("rlColor").value = argbToRgbHexOnly(rl.hex);
     var wrap = document.getElementById("ledStripEdit");
     wrap.innerHTML = "";
+    wrap.setAttribute("role", "toolbar");
+    wrap.setAttribute("aria-label", "LEDs. Use arrow keys to move between them.");
     state.ledColors.forEach(function(c,i){
       var chip = document.createElement("div");
       chip.className = "led-chip" + (i===selectedLed ? " selected":"") + (c.off ? " off":"");
       chip.title = "LED " + ledLabel(i);
-      chip.tabIndex = 0;
+      chip.setAttribute("role", "button");
+      chip.setAttribute("aria-pressed", i===selectedLed ? "true" : "false");
+      chip.setAttribute("aria-label", (i === 0 ? "Redline flash color" : "LED " + i) + (c.off ? ", gap" : ", " + c.hex));
+      chip.tabIndex = i===selectedLed ? 0 : -1;
       var sw = document.createElement("div");
       sw.className = "sw";
       if(!c.off) sw.style.background = argbToCssRgba(c.hex);
@@ -693,7 +919,14 @@
       lbl.className = "lbl";
       lbl.textContent = ledLabel(i);
       chip.appendChild(sw); chip.appendChild(lbl);
-      chip.addEventListener("click", function(){ selectedLed = i; renderColorStrip(); renderLedEditor(); });
+      chip.addEventListener("click", function(){ selectLed(i, false); });
+      chip.addEventListener("keydown", function(e){
+        if(e.key === "Enter" || e.key === " "){ e.preventDefault(); selectLed(i, true); }
+        else if(e.key === "ArrowRight" || e.key === "ArrowDown"){ e.preventDefault(); selectLed(i+1, true); }
+        else if(e.key === "ArrowLeft" || e.key === "ArrowUp"){ e.preventDefault(); selectLed(i-1, true); }
+        else if(e.key === "Home"){ e.preventDefault(); selectLed(0, true); }
+        else if(e.key === "End"){ e.preventDefault(); selectLed(state.ledColors.length-1, true); }
+      });
       wrap.appendChild(chip);
     });
   }
@@ -828,6 +1061,8 @@
         inp.type = "number"; inp.step = "5";
         inp.value = arr[i] !== undefined ? arr[i] : 0;
         inp.disabled = i > 0 && !!(state.ledColors[i] && state.ledColors[i].off);
+        inp.dataset.gear = g; inp.dataset.led = i;
+        inp.setAttribute("aria-label", "Gear " + g + ", " + (i === 0 ? "redline" : "LED " + i) + " RPM");
         (function(g,i,inp){
           inp.addEventListener("input", function(){
             state.gearRpm[g][i] = inp.value === "" ? 0 : parseInt(inp.value,10);
@@ -859,6 +1094,38 @@
       body.appendChild(tr);
     });
   }
+
+  // Pasting several numbers into a cell spreads them rightwards; several lines fill the following gears.
+  // Accepts spreadsheet rows (tabs), CSV, or JSON-style rows like  "3": [8000,6500,…]
+  function parsePastedRows(text){
+    return text.split(/\r?\n/).map(function(line){
+      line = line.replace(/^\s*"[^"]*"\s*:\s*/, "");
+      return line.split(/[\s,;\[\]]+/).filter(function(t){ return /^-?\d+(\.\d+)?$/.test(t); }).map(function(t){ return Math.round(+t); });
+    }).filter(function(row){ return row.length; });
+  }
+
+  document.getElementById("gearTableBody").addEventListener("paste", function(e){
+    var inp = e.target;
+    if(!inp || !inp.dataset || inp.dataset.gear === undefined) return;
+    var text = (e.clipboardData || window.clipboardData).getData("text") || "";
+    var rows = parsePastedRows(text);
+    if(!rows.length || (rows.length === 1 && rows[0].length === 1)) return; // single value: normal paste
+    e.preventDefault();
+    var startGear = state.gearOrder.indexOf(inp.dataset.gear), startLed = parseInt(inp.dataset.led,10);
+    rows.forEach(function(row, r){
+      var g = state.gearOrder[startGear + r];
+      if(g === undefined) return;
+      row.forEach(function(v, c){
+        var led = startLed + c;
+        if(led > state.ledNumber) return;
+        if(led > 0 && state.ledColors[led] && state.ledColors[led].off) return;
+        state.gearRpm[g][led] = v;
+      });
+    });
+    renderGearTable(); renderPreviewSelectors(); renderPreview(); renderValidation(); renderJson();
+    var again = document.querySelector('#gearTableBody input[data-gear="' + CSS.escape(inp.dataset.gear) + '"][data-led="' + startLed + '"]');
+    if(again) again.focus();
+  });
 
   function setGearPreset(list){
     var newOrder = list.slice();
@@ -893,6 +1160,7 @@
     var maxRange = Math.max(1000, Math.round((maxRl*1.15)/100)*100 || 9000);
     var range = document.getElementById("prevRpm");
     range.max = maxRange;
+    renderGeneratorTarget();
   }
 
   function renderPreview(){
@@ -917,8 +1185,10 @@
       var threshold = arr[i] || 0;
       var inRedline = atRedline && redlineHex;
       var lit = inRedline || (threshold > 0 && rpm >= threshold);
-      el.className = "pled" + (i===0 ? " rl":"") + (lit ? " lit":"");
-      var rgb = argbToCssRgba(inRedline ? redlineHex : c.hex);
+      var shownHex = inRedline ? redlineHex : c.hex;
+      el.className = "pled" + (i===0 ? " rl":"") + (lit ? " lit":"") + (argbHexToRgb(shownHex).a === 0 ? " clear" : "");
+      if(argbHexToRgb(shownHex).a === 0) el.title = "Transparent LED";
+      var rgb = argbToCssRgba(shownHex);
       el.style.background = lit ? rgb : rgb.replace(/[\d.]+\)$/, "0.18)");
       el.style.setProperty("--glow", rgb);
       wrap.appendChild(el);
@@ -1027,13 +1297,32 @@
     if(!slugify(state.carId)) add("error","Can't derive a file name from carId.");
     else add("ok","File name: "+slugify(state.carId)+".json");
 
+    // Checks against the repo's manifest (only once it has loaded from GitHub).
+    var relPath = repoRelPath();
+    if(relPath && repo.status === "ready"){
+      var sim = slugify(state.simId);
+      var existing = repo.index[relPath];
+      if(state.origin && state.origin.path !== relPath){
+        add("warn","This car is data/" + state.origin.path + " in the repo, but its sim and carId give data/" + relPath + ". Submitting it creates a new file and leaves the old one in place.");
+      } else if(!state.origin && existing){
+        add("info","data/" + relPath + " already exists in the repo, so this would replace it. Use Load from repo to see your changes against it.");
+      }
+      if(existing && existing.carId !== state.carId && !(state.origin && state.origin.path === relPath)){
+        add("warn","data/" + relPath + " in the repo belongs to carId '" + existing.carId + "', not '" + state.carId + "'.");
+      }
+      var sameId = (repo.cars[sim] || []).filter(function(e){
+        return e.carId === state.carId && e.path !== relPath && !(state.origin && e.path === state.origin.path);
+      });
+      if(sameId.length) add("warn","carId '" + state.carId + "' is also used by " + sameId.map(function(e){ return "data/" + e.path; }).join(", ") + ".");
+    }
+
     var list = document.getElementById("validationList");
     list.innerHTML = "";
     items.forEach(function(it){
       var li = document.createElement("li");
       var icon = document.createElement("span");
       icon.className = "vicon " + it.level;
-      icon.textContent = it.level==="ok" ? "✓" : it.level==="warn" ? "!" : "✕";
+      icon.textContent = it.level==="ok" ? "✓" : it.level==="warn" ? "!" : it.level==="info" ? "i" : "✕";
       var span = document.createElement("span"); span.textContent = it.msg;
       li.appendChild(icon); li.appendChild(span);
       list.appendChild(li);
@@ -1042,6 +1331,8 @@
 
   function renderJson(){
     document.getElementById("jsonOut").textContent = buildJsonText();
+    renderDiff();
+    scheduleCommit();
   }
 
   function renderAll(){
@@ -1076,38 +1367,495 @@
   document.getElementById("prevGear").addEventListener("change", renderPreview);
   document.getElementById("prevRpm").addEventListener("input", renderPreview);
 
-  document.getElementById("btnCopy").addEventListener("click", function(){
-    var text = buildJsonText();
-    var btn = document.getElementById("btnCopy");
-    function done(ok){ btn.textContent = ok ? "Copied!" : "Copy failed — select & copy manually"; setTimeout(function(){ btn.textContent="Copy JSON"; }, 1600); }
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).then(function(){done(true);}, function(){done(false);});
-    } else {
+  function copyText(text){
+    if(navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+    return new Promise(function(resolve, reject){
       try{
         var ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select();
-        document.execCommand("copy"); document.body.removeChild(ta); done(true);
-      }catch(e){ done(false); }
-    }
+        document.execCommand("copy"); document.body.removeChild(ta); resolve();
+      }catch(e){ reject(e); }
+    });
+  }
+
+  document.getElementById("btnCopy").addEventListener("click", function(){
+    var btn = document.getElementById("btnCopy");
+    function done(ok){ btn.textContent = ok ? "Copied!" : "Copy failed — select & copy manually"; setTimeout(function(){ btn.textContent="Copy JSON"; }, 1600); }
+    copyText(buildJsonText()).then(function(){done(true);}, function(){done(false);});
   });
 
+  // ---------- Lovely Car Data repo (read-only, public files on GitHub) ----------
+  var REPO = "Lovely-Sim-Racing/lovely-car-data", BRANCH = "main";
+  var RAW_BASE = "https://raw.githubusercontent.com/" + REPO + "/" + BRANCH + "/";
+  var repo = {status:"idle", cars:{}, index:{}, error:"", promise:null};
+
+  function loadManifest(){
+    if(repo.status === "loading" || repo.status === "ready") return repo.promise;
+    repo.status = "loading";
+    renderRepoModal();
+    repo.promise = fetch(RAW_BASE + "data/manifest.json").then(function(r){
+      if(!r.ok) throw new Error("GitHub returned " + r.status);
+      return r.json();
+    }).then(function(m){
+      repo.cars = (m && m.cars) || {};
+      repo.index = {};
+      Object.keys(repo.cars).forEach(function(sim){
+        repo.cars[sim].forEach(function(e){ repo.index[e.path] = e; });
+      });
+      repo.status = "ready";
+    }, function(err){
+      repo.status = "error";
+      repo.error = err && err.message ? err.message : String(err);
+    }).then(function(){
+      renderRepoModal(); renderValidation(); renderGithubButton();
+    });
+    return repo.promise;
+  }
+
+  function openRepoModal(){
+    document.getElementById("repoBackdrop").hidden = false;
+    var simSel = document.getElementById("repoSim");
+    if(repo.status === "ready" && repo.cars[slugify(state.simId)]) simSel.value = slugify(state.simId);
+    loadManifest();
+    renderRepoModal();
+    document.getElementById("repoSearch").focus();
+  }
+  function closeRepoModal(){ document.getElementById("repoBackdrop").hidden = true; }
+
+  var repoSimsFilled = false;
+  function renderRepoModal(){
+    var status = document.getElementById("repoStatus");
+    var list = document.getElementById("repoList");
+    document.getElementById("repoRetry").hidden = repo.status !== "error";
+    status.classList.toggle("err", repo.status === "error");
+    if(repo.status !== "ready"){
+      list.innerHTML = "";
+      status.textContent = repo.status === "error" ? "Couldn't load the car list from GitHub (" + repo.error + ")." : "Loading the car list from GitHub…";
+      return;
+    }
+    var simSel = document.getElementById("repoSim");
+    if(!repoSimsFilled){
+      var sims = Object.keys(repo.cars).sort();
+      simSel.innerHTML = "";
+      sims.forEach(function(s){ var o=document.createElement("option"); o.value=s; o.textContent=s + " (" + repo.cars[s].length + ")"; simSel.appendChild(o); });
+      simSel.value = repo.cars[slugify(state.simId)] ? slugify(state.simId) : sims[0];
+      repoSimsFilled = true;
+    }
+    var q = document.getElementById("repoSearch").value.trim().toLowerCase();
+    var cars = (repo.cars[simSel.value] || []).filter(function(e){
+      return !q || (e.carName + " " + e.carId + " " + e.path).toLowerCase().indexOf(q) !== -1;
+    }).sort(function(a,b){ return a.carName.toLowerCase() < b.carName.toLowerCase() ? -1 : 1; });
+    var LIMIT = 150;
+    status.textContent = cars.length === 0 ? "No cars match." : cars.length > LIMIT ? "Showing " + LIMIT + " of " + cars.length + ". Type to narrow it down." : cars.length + " car" + (cars.length === 1 ? "" : "s") + ".";
+    list.innerHTML = "";
+    cars.slice(0, LIMIT).forEach(function(e){
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      var name = document.createElement("span"); name.className = "rc-name"; name.textContent = e.carName || e.carId;
+      var meta = document.createElement("span"); meta.className = "rc-meta"; meta.textContent = e.carId + " · data/" + e.path;
+      b.appendChild(name); b.appendChild(meta);
+      b.addEventListener("click", function(){ loadRepoCar(simSel.value, e); });
+      li.appendChild(b); list.appendChild(li);
+    });
+  }
+
+  function loadRepoCar(sim, entry){
+    var status = document.getElementById("repoStatus");
+    status.classList.remove("err");
+    status.textContent = "Loading data/" + entry.path + "…";
+    fetch(RAW_BASE + "data/" + entry.path).then(function(r){
+      if(!r.ok) throw new Error("GitHub returned " + r.status);
+      return r.text();
+    }).then(function(text){
+      flushCommit();
+      importFromText(text);
+      state.simId = sim;
+      var baseline = buildJsonText();
+      state.origin = {path: entry.path, baseline: baseline};
+      var raw = text.replace(/\r\n/g, "\n");
+      if(!state.importNotes.length && raw !== baseline && raw + "\n" !== baseline){
+        state.importNotes.push("The file's spacing differs from the repo's usual layout, so the output reformats it. The data is unchanged.");
+      }
+      closeRepoModal();
+      afterLoad();
+    }).catch(function(err){
+      status.classList.add("err");
+      status.textContent = "Couldn't load data/" + entry.path + ": " + (err && err.message ? err.message : err);
+    });
+  }
+
+  document.getElementById("btnRepo").addEventListener("click", openRepoModal);
+  document.getElementById("repoCancel").addEventListener("click", closeRepoModal);
+  document.getElementById("repoRetry").addEventListener("click", function(){ repo.status = "idle"; loadManifest(); });
+  document.getElementById("repoSim").addEventListener("change", renderRepoModal);
+  document.getElementById("repoSearch").addEventListener("input", renderRepoModal);
+  document.getElementById("repoSearch").addEventListener("keydown", function(e){
+    if(e.key === "Enter"){ var first = document.querySelector("#repoList button"); if(first) first.click(); }
+  });
+
+  // ---------- changes vs. the repo file ----------
+  var outTab = "json";
+  function lineDiff(a, b){
+    var n = a.length, m = b.length, i, j;
+    var L = [];
+    for(i=0;i<=n;i++){ L.push(new Array(m+1).fill(0)); }
+    for(i=n-1;i>=0;i--) for(j=m-1;j>=0;j--) L[i][j] = a[i] === b[j] ? L[i+1][j+1] + 1 : Math.max(L[i+1][j], L[i][j+1]);
+    var ops = []; i = 0; j = 0;
+    while(i < n && j < m){
+      if(a[i] === b[j]){ ops.push({t:"same", s:a[i]}); i++; j++; }
+      else if(L[i+1][j] >= L[i][j+1]){ ops.push({t:"del", s:a[i]}); i++; }
+      else { ops.push({t:"add", s:b[j]}); j++; }
+    }
+    while(i < n) ops.push({t:"del", s:a[i++]});
+    while(j < m) ops.push({t:"add", s:b[j++]});
+    return ops;
+  }
+
+  function renderDiff(){
+    var tabs = document.getElementById("outTabs");
+    var jsonOut = document.getElementById("jsonOut"), diffOut = document.getElementById("diffOut");
+    if(!state.origin){
+      tabs.hidden = true; outTab = "json";
+      jsonOut.hidden = false; diffOut.hidden = true;
+      return;
+    }
+    tabs.hidden = false;
+    var ops = lineDiff(state.origin.baseline.replace(/\n$/, "").split("\n"), buildJsonText().replace(/\n$/, "").split("\n"));
+    var changed = ops.filter(function(o){ return o.t !== "same"; }).length;
+    document.getElementById("tabDiff").textContent = "Changes" + (changed ? " (" + changed + " lines)" : "");
+    document.getElementById("tabJson").setAttribute("aria-selected", outTab === "json");
+    document.getElementById("tabDiff").setAttribute("aria-selected", outTab === "diff");
+    jsonOut.hidden = outTab !== "json"; diffOut.hidden = outTab !== "diff";
+    if(outTab !== "diff") return;
+
+    diffOut.innerHTML = "";
+    function line(cls, prefix, s){ var el=document.createElement("span"); el.className="dl "+cls; el.textContent=prefix+s; diffOut.appendChild(el); }
+    if(!changed){ line("skip", "", "No changes compared with data/" + state.origin.path + "."); return; }
+    // Show changed lines with two lines of context; collapse longer unchanged runs.
+    var CONTEXT = 2;
+    var visible = ops.map(function(o, k){
+      if(o.t !== "same") return true;
+      for(var d=-CONTEXT; d<=CONTEXT; d++){ var p = ops[k+d]; if(p && p.t !== "same") return true; }
+      return false;
+    });
+    for(var k=0; k<ops.length; ){
+      if(visible[k]){
+        var o = ops[k];
+        line(o.t, o.t === "add" ? "+ " : o.t === "del" ? "- " : "  ", o.s);
+        k++;
+      } else {
+        var run = 0;
+        while(k+run < ops.length && !visible[k+run]) run++;
+        line("skip", "  ", "… " + run + " unchanged line" + (run === 1 ? "" : "s"));
+        k += run;
+      }
+    }
+  }
+
+  document.getElementById("tabJson").addEventListener("click", function(){ outTab = "json"; renderDiff(); });
+  document.getElementById("tabDiff").addEventListener("click", function(){ outTab = "diff"; renderDiff(); });
+
+  // ---------- open on GitHub ----------
+  var GH_URL_LIMIT = 8000;
+  function githubPlan(){
+    var relPath = repoRelPath();
+    if(isGeneratedLmu()) return {kind:"lmu", label:"Open LMU templates on GitHub", url:"https://github.com/" + REPO + "/tree/" + BRANCH + "/src_data/lmu",
+      hint:"LMU values belong in the src_data/lmu templates, so this opens that folder."};
+    if(!relPath) return {kind:"none", label:"Open on GitHub", hint:"Needs a sim folder and carId first."};
+    var exists = repo.status === "ready" ? !!repo.index[relPath] : null;
+    if(exists) return {kind:"edit", label:"Copy & edit on GitHub", url:"https://github.com/" + REPO + "/edit/" + BRANCH + "/data/" + relPath,
+      hint:"Copies the JSON, then opens data/" + relPath + " for editing. Select everything there and paste."};
+    var sim = relPath.split("/")[0], file = relPath.split("/")[1];
+    var url = "https://github.com/" + REPO + "/new/" + BRANCH + "/data/" + sim + "?filename=" + encodeURIComponent(file) + "&value=" + encodeURIComponent(buildJsonText());
+    var tooLong = url.length > GH_URL_LIMIT;
+    if(tooLong) url = "https://github.com/" + REPO + "/new/" + BRANCH + "/data/" + sim + "?filename=" + encodeURIComponent(file);
+    return {kind:"new", label:"Create on GitHub", url:url, copy:tooLong,
+      hint:(tooLong ? "Copies the JSON (too long to pre-fill), then opens a new-file page for data/" + relPath + ". Paste it in."
+        : "Opens GitHub's new-file page with data/" + relPath + " filled in.") +
+        (exists === null ? " Couldn't check whether this file already exists." : "")};
+  }
+  function renderGithubButton(){
+    var plan = githubPlan();
+    var btn = document.getElementById("btnGithub");
+    btn.textContent = plan.label;
+    btn.disabled = plan.kind === "none";
+    document.getElementById("githubHint").textContent = plan.hint;
+  }
+  document.getElementById("btnGithub").addEventListener("click", function(){
+    var plan = githubPlan();
+    if(!plan.url) return;
+    if(plan.kind === "edit" || plan.copy) copyText(buildJsonText()).catch(function(){});
+    window.open(plan.url, "_blank", "noopener");
+  });
+
+  // ---------- RPM generator ----------
+  function genNum(id){ var v = parseFloat(document.getElementById(id).value); return isFinite(v) ? v : 0; }
+
+  function renderGeneratorTarget(){
+    var sel = document.getElementById("genTarget");
+    var prev = sel.value;
+    sel.innerHTML = "";
+    var all = document.createElement("option"); all.value = "__all"; all.textContent = "All gears"; sel.appendChild(all);
+    state.gearOrder.forEach(function(g){ var o=document.createElement("option"); o.value=g; o.textContent="Gear " + g; sel.appendChild(o); });
+    sel.value = prev && (prev === "__all" || state.gearOrder.indexOf(prev) !== -1) ? prev : "__all";
+    renderGenSummary();
+  }
+
+  function updateGenFields(){
+    var mode = document.getElementById("genMode").value;
+    document.querySelectorAll(".gen-even").forEach(function(el){ el.hidden = mode !== "even"; });
+    document.querySelectorAll(".gen-step").forEach(function(el){ el.hidden = mode !== "step"; });
+    document.querySelectorAll(".gen-percent").forEach(function(el){ el.hidden = mode !== "percent"; });
+    renderGenSummary();
+  }
+
+  // Returns {row:[RL, LED1…N], stages, error}. LEDs marked as gaps stay 0.
+  function computeGenerated(){
+    var mode = document.getElementById("genMode").value, layout = document.getElementById("genLayout").value;
+    var redline = Math.round(genNum("genRedline"));
+    if(redline <= 0) return {error:"Set a redline RPM above 0."};
+    var active = [];
+    for(var i=1;i<=state.ledNumber;i++){ if(!(state.ledColors[i] && state.ledColors[i].off)) active.push(i); }
+    var n = active.length;
+    if(!n) return {error:"Every LED is marked as a gap."};
+    var mirrored = layout === "outsideIn" || layout === "insideOut";
+    var stages = mirrored ? Math.ceil(n/2) : n;
+    function frac(s){ return stages > 1 ? s/(stages-1) : 1; }
+    function stageValue(s){
+      if(mode === "even") return genNum("genFirst") + (genNum("genLast") - genNum("genFirst")) * frac(s);
+      if(mode === "step"){ var step = genNum("genStep"); return redline - (stages-1-s) * step; }
+      return redline * (genNum("genPctFirst") + (genNum("genPctLast") - genNum("genPctFirst")) * frac(s)) / 100;
+    }
+    if(mode === "step" && genNum("genStep") <= 0) return {error:"Set a step above 0."};
+    var row = defaultRpmArray(state.ledNumber + 1);
+    row[0] = redline;
+    active.forEach(function(led, p){
+      var s;
+      if(layout === "rising") s = p;
+      else if(layout === "falling") s = n-1-p;
+      else if(layout === "outsideIn") s = Math.min(p, n-1-p);
+      else s = stages-1-Math.min(p, n-1-p);
+      row[led] = Math.round(stageValue(s));
+    });
+    var values = []; for(var k=0;k<stages;k++) values.push(Math.round(stageValue(k)));
+    return {row:row, stages:stages, values:values, mirrored:mirrored, n:n};
+  }
+
+  function renderGenSummary(){
+    var out = document.getElementById("genSummary");
+    var g = computeGenerated();
+    if(g.error){ out.textContent = g.error; document.getElementById("btnGenerate").disabled = true; return; }
+    document.getElementById("btnGenerate").disabled = false;
+    var v = g.values;
+    var shown = v.length <= 5 ? v.join(", ") : v.slice(0,3).join(", ") + ", … " + v[v.length-1];
+    var warn = v.some(function(x){ return x <= 0; }) ? " Some values are 0 or below." : v.some(function(x){ return x > g.row[0]; }) ? " Some values are above the redline." : "";
+    out.textContent = g.n + " LEDs" + (g.mirrored ? " in " + g.stages + " mirrored pairs" : "") + ": " + shown + " rpm, RL " + g.row[0] + "." + warn;
+  }
+
+  document.getElementById("btnGenerate").addEventListener("click", function(){
+    var g = computeGenerated();
+    if(g.error) return;
+    var target = document.getElementById("genTarget").value;
+    var gears = target === "__all" ? state.gearOrder.slice() : [target];
+    gears.forEach(function(gear){ state.gearRpm[gear] = g.row.slice(); });
+    renderGearTable(); renderPreviewSelectors(); renderPreview(); renderValidation(); renderJson();
+  });
+
+  // Prefill the generator from the gear shown in the preview.
+  document.getElementById("btnGenFromGear").addEventListener("click", function(){
+    var arr = state.gearRpm[document.getElementById("prevGear").value] || [];
+    var leds = arr.slice(1).filter(function(v){ return v > 0; });
+    if(arr[0] > 0) document.getElementById("genRedline").value = arr[0];
+    if(leds.length){
+      var lo = Math.min.apply(null, leds), hi = Math.max.apply(null, leds);
+      document.getElementById("genFirst").value = lo;
+      document.getElementById("genLast").value = hi;
+      var layout = classifyLayout(arr);
+      if(LAYOUT_LABELS[layout]) document.getElementById("genLayout").value = layout;
+      var stages = (layout === "outsideIn" || layout === "insideOut") ? Math.ceil(leds.length/2) : leds.length;
+      if(stages > 1) document.getElementById("genStep").value = Math.max(1, Math.round((hi - lo) / (stages - 1)));
+      if(arr[0] > 0){
+        document.getElementById("genPctFirst").value = Math.round(lo / arr[0] * 1000) / 10;
+        document.getElementById("genPctLast").value = Math.round(hi / arr[0] * 1000) / 10;
+      }
+    }
+    renderGenSummary();
+  });
+  ["genMode"].forEach(function(id){ document.getElementById(id).addEventListener("change", updateGenFields); });
+  ["genLayout","genTarget"].forEach(function(id){ document.getElementById(id).addEventListener("change", renderGenSummary); });
+  ["genRedline","genFirst","genLast","genStep","genPctFirst","genPctLast"].forEach(function(id){ document.getElementById(id).addEventListener("input", renderGenSummary); });
+
+  // ---------- rev sweep ----------
+  var sweep = null;
+  var SWEEP_RISE_MS = 1500, SWEEP_HOLD_MS = 800;
+  function stopSweep(){
+    if(!sweep) return;
+    cancelAnimationFrame(sweep.raf);
+    sweep = null;
+    document.getElementById("btnSweep").textContent = "▶ Rev sweep";
+  }
+  function startSweep(){
+    var current = document.getElementById("prevGear").value;
+    var gears = document.getElementById("sweepAll").checked ? state.gearOrder.slice() : [current];
+    gears = gears.filter(function(g){ return (state.gearRpm[g] || [])[0] > 0; });
+    if(!gears.length){ document.getElementById("redlineStatus").textContent = "Set a redline RPM to play a sweep."; return; }
+    sweep = {gears:gears, idx:0, t0:performance.now(), raf:0};
+    document.getElementById("btnSweep").textContent = "■ Stop";
+    sweep.raf = requestAnimationFrame(sweepFrame);
+  }
+  function sweepFrame(now){
+    if(!sweep) return;
+    var g = sweep.gears[sweep.idx], arr = state.gearRpm[g];
+    if(!arr){ stopSweep(); return; }
+    var redline = arr[0];
+    var leds = arr.slice(1).filter(function(v){ return v > 0; });
+    var lo = Math.max(0, Math.round((leds.length ? Math.min.apply(null, leds) : redline * 0.7) * 0.9));
+    var hi = Math.round(redline * 1.03);
+    var t = (now - sweep.t0) / SWEEP_RISE_MS;
+    var rpm = t >= 1 ? hi : lo + (hi - lo) * (1 - Math.pow(1 - t, 2)); // ease-out, like revs building
+    var range = document.getElementById("prevRpm");
+    if(+range.max < hi) range.max = hi;
+    document.getElementById("prevGear").value = g;
+    range.value = Math.round(rpm);
+    renderPreview();
+    if(now - sweep.t0 >= SWEEP_RISE_MS + SWEEP_HOLD_MS){
+      sweep.idx++;
+      sweep.t0 = now;
+      if(sweep.idx >= sweep.gears.length){ stopSweep(); return; }
+    }
+    sweep.raf = requestAnimationFrame(sweepFrame);
+  }
+  document.getElementById("btnSweep").addEventListener("click", function(){ if(sweep) stopSweep(); else startSweep(); });
+  document.getElementById("prevRpm").addEventListener("input", stopSweep);
+  document.getElementById("prevGear").addEventListener("change", stopSweep);
+
+  // ---------- undo / redo and autosave ----------
+  var DRAFT_KEY = "rpm-led-builder:draft:v1";
+  var HISTORY_LIMIT = 100;
+  var undoStack = [], redoStack = [], lastSnap = null, commitTimer = null, restoring = false;
+
+  function snapshot(){ return JSON.stringify({state:state, selectedLed:selectedLed}); }
+
+  function saveDraft(snap){
+    try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({savedAt:Date.now(), snap:snap})); }catch(e){}
+  }
+  function readDraft(){
+    try{
+      var d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+      if(d && typeof d.snap === "string" && JSON.parse(d.snap).state) return d;
+    }catch(e){}
+    return null;
+  }
+
+  function updateUndoButtons(){
+    document.getElementById("btnUndo").disabled = !undoStack.length;
+    document.getElementById("btnRedo").disabled = !redoStack.length;
+  }
+
+  // Edits arrive in bursts (typing, dragging a color); group anything within 400 ms into one undo step.
+  function scheduleCommit(){
+    if(restoring || lastSnap === null) return;
+    clearTimeout(commitTimer);
+    commitTimer = setTimeout(commit, 400);
+  }
+  function commit(){
+    commitTimer = null;
+    var cur = snapshot();
+    if(cur === lastSnap) return;
+    undoStack.push(lastSnap);
+    if(undoStack.length > HISTORY_LIMIT) undoStack.shift();
+    redoStack = [];
+    lastSnap = cur;
+    saveDraft(cur);
+    updateUndoButtons();
+  }
+  function flushCommit(){ if(commitTimer){ clearTimeout(commitTimer); commit(); } }
+
+  function restoreSnapshot(snap){
+    var o = JSON.parse(snap);
+    stopSweep();
+    restoring = true;
+    try{
+      Object.keys(o.state).forEach(function(k){ state[k] = o.state[k]; });
+      if(!state.extra) state.extra = {};
+      if(!state.importNotes) state.importNotes = [];
+      if(state.origin === undefined) state.origin = null;
+      selectedLed = o.selectedLed || 0;
+      if(selectedLed >= state.ledColors.length) selectedLed = 0;
+      renderAll();
+    } finally {
+      restoring = false;
+    }
+    lastSnap = snap;
+    saveDraft(snap);
+    updateUndoButtons();
+  }
+
+  function undo(){
+    flushCommit();
+    if(!undoStack.length) return;
+    redoStack.push(lastSnap);
+    restoreSnapshot(undoStack.pop());
+  }
+  function redo(){
+    flushCommit();
+    if(!redoStack.length) return;
+    undoStack.push(lastSnap);
+    restoreSnapshot(redoStack.pop());
+  }
+
+  document.getElementById("btnUndo").addEventListener("click", undo);
+  document.getElementById("btnRedo").addEventListener("click", redo);
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Escape"){
+      if(!document.getElementById("repoBackdrop").hidden) closeRepoModal();
+      if(!document.getElementById("importBackdrop").hidden) document.getElementById("importBackdrop").hidden = true;
+      return;
+    }
+    if(!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    var t = e.target, tag = t && t.tagName;
+    // Leave text fields to the browser's own undo; their edits still land in this history.
+    if(tag === "TEXTAREA" || (tag === "INPUT" && /^(text|number|search)$/.test(t.type))) return;
+    if(!document.getElementById("repoBackdrop").hidden || !document.getElementById("importBackdrop").hidden) return;
+    var k = e.key.toLowerCase();
+    if(k === "z" && !e.shiftKey){ e.preventDefault(); undo(); }
+    else if(k === "y" || (k === "z" && e.shiftKey)){ e.preventDefault(); redo(); }
+  });
+
+  // ---------- load buttons ----------
+  // Loads replace the whole car, so each one is its own undo step: pending edits are
+  // committed before the state is replaced (callers flushCommit first) and the load right after.
+  function afterLoad(keepExampleBanner){
+    stopSweep();
+    if(!keepExampleBanner) document.getElementById("exampleBanner").hidden = true;
+    document.getElementById("draftBanner").hidden = true;
+    renderAll();
+    flushCommit();
+  }
+
   document.getElementById("btnExample").addEventListener("click", function(){
+    flushCommit();
     importFromText(EXAMPLE_TEXT);
     state.simId = "assettocorsacompetizione";
-    renderAll();
+    afterLoad(true);
   });
   document.getElementById("btnBlank").addEventListener("click", function(){
+    flushCommit();
     loadBlank();
     state.simId = state.simId || "assettocorsacompetizione";
-    renderAll();
+    afterLoad();
   });
   document.getElementById("dismissBanner").addEventListener("click", function(){
     document.getElementById("exampleBanner").hidden = true;
+  });
+  document.getElementById("dismissDraftBanner").addEventListener("click", function(){
+    document.getElementById("draftBanner").hidden = true;
   });
 
   document.getElementById("btnImport").addEventListener("click", function(){
     document.getElementById("importErr").hidden = true;
     document.getElementById("importText").value = "";
     document.getElementById("importBackdrop").hidden = false;
+    document.getElementById("importText").focus();
   });
   document.getElementById("importCancel").addEventListener("click", function(){
     document.getElementById("importBackdrop").hidden = true;
@@ -1115,10 +1863,10 @@
   document.getElementById("importParse").addEventListener("click", function(){
     var errEl = document.getElementById("importErr");
     try{
+      flushCommit();
       importFromText(document.getElementById("importText").value);
       document.getElementById("importBackdrop").hidden = true;
-      document.getElementById("exampleBanner").hidden = true;
-      renderAll();
+      afterLoad();
     }catch(e){
       errEl.textContent = e.message;
       errEl.hidden = false;
@@ -1126,8 +1874,22 @@
   });
 
   // ---------- boot ----------
-  importFromText(EXAMPLE_TEXT);
-  state.simId = "assettocorsacompetizione";
-  renderAll();
+  updateGenFields();
+  var draft = readDraft();
+  if(draft){
+    try{
+      restoreSnapshot(draft.snap);
+      document.getElementById("exampleBanner").hidden = true;
+      document.getElementById("draftBanner").hidden = false;
+      document.getElementById("draftBannerText").textContent = "Restored your work from " + new Date(draft.savedAt).toLocaleString() + ". Click Load example or Start blank to begin something else; Undo brings this back.";
+    }catch(e){ draft = null; }
+  }
+  if(!draft){
+    importFromText(EXAMPLE_TEXT);
+    state.simId = "assettocorsacompetizione";
+    renderAll();
+    lastSnap = snapshot();
+  }
+  loadManifest();
 })();
 </script>
