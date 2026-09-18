@@ -149,7 +149,8 @@
   .pled{flex:1; height:38px; border-radius:5px; background:var(--border); opacity:.28; transition:opacity .08s, box-shadow .08s; min-width:6px;}
   .pled.gap{opacity:0; flex:.35;}
   .pled.lit{opacity:1; box-shadow:0 0 10px 1px var(--glow, transparent);}
-  .pled.rl{outline:2px solid var(--border); outline-offset:1px;}
+  .rl-swatch{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:6px; vertical-align:-1px; border:1px solid var(--border);}
+  .rl-swatch.none{background:repeating-linear-gradient(45deg, var(--border), var(--border) 2px, transparent 2px, transparent 4px);}
   .led-strip-preview.redline .pled{transition:none;}
   .led-strip-preview.blink-off .pled{opacity:.1; box-shadow:none;}
   .redline-status{font-family:var(--font-mono); font-size:.7rem; color:var(--text-dim); min-height:1.2em; margin-bottom:4px;}
@@ -402,7 +403,7 @@
         <button class="small" id="btnSweep">▶ Rev sweep</button>
         <label class="checkline sweep-all"><input type="checkbox" id="sweepAll" checked> all gears</label>
       </div>
-      <p class="preview-caption">Follows how ATSR lights these files: an LED lights once RPM is above its value (a value of 0 is always lit), and black or transparent LEDs are gaps that never light. Above the redline (RL) every LED shows the RL color and blinks at the blink interval, going dark in between; with a transparent RL color the LEDs keep their own colors. The outlined first light shows the RL color.</p>
+      <p class="preview-caption">Follows how ATSR lights these files: an LED lights once RPM is above its value (a value of 0 is always lit), and black or transparent LEDs are gaps that never light. Above the redline (RL) every LED shows the RL color and blinks at the blink interval, going dark in between; with a transparent RL color the LEDs keep their own colors. The swatch before the redline line shows the RL color.</p>
 
       <h2 style="margin-top:18px;">Validation</h2>
       <ul class="validation-list" id="validationList"></ul>
@@ -1243,8 +1244,10 @@
 
     wrap.innerHTML = "";
     state.ledColors.forEach(function(c,i){
+      // Index 0 is the redline color, not a light on the wheel: it's shown beside the redline line instead.
+      if(i === 0) return;
       var el = document.createElement("div");
-      if(i === 0 ? c.off : isGapLed(i)){
+      if(isGapLed(i)){
         el.className = "pled gap";
         wrap.appendChild(el);
         return;
@@ -1253,7 +1256,7 @@
       var inRedline = atRedline && redlineHex;
       var lit = inRedline || rpm > threshold;
       var shownHex = inRedline ? redlineHex : c.hex;
-      el.className = "pled" + (i===0 ? " rl":"") + (lit ? " lit":"") + (argbHexToRgb(shownHex).a === 0 ? " clear" : "");
+      el.className = "pled" + (lit ? " lit":"") + (argbHexToRgb(shownHex).a === 0 ? " clear" : "");
       if(argbHexToRgb(shownHex).a === 0) el.title = "Transparent LED";
       var rgb = argbToCssRgba(shownHex);
       el.style.background = lit ? rgb : rgb.replace(/[\d.]+\)$/, "0.18)");
@@ -1279,6 +1282,13 @@
         (redlineHex ? " in the redline color." : ". No redline color set, so each LED keeps its own color.");
       setRedlineBlink(interval);
     }
+
+    // The redline color as a swatch in front of the line, since it isn't one of the lights.
+    var swatch = document.createElement("span");
+    swatch.className = "rl-swatch" + (redlineHex ? "" : " none");
+    if(redlineHex) swatch.style.background = argbToCssRgba(redlineHex);
+    swatch.title = redlineHex ? "Redline color " + redlineHex : "No redline color: the LEDs keep their own colors";
+    status.insertBefore(swatch, status.firstChild);
   }
 
   // Driven by a timer on the persistent strip container, not a CSS animation on the
