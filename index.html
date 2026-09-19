@@ -667,6 +667,7 @@
 
   // ---------- load data into state ----------
   function loadBlank(){
+    repoLoadId++;
     state.carName = "";
     state.carId = "";
     state.carClass = "";
@@ -703,6 +704,9 @@
     catch(e){ throw new Error("Could not parse JSON: " + e.message); }
 
     if(!obj || typeof obj !== "object" || Array.isArray(obj)) throw new Error("Expected a JSON object like { \"carName\": … }.");
+    ["carName", "carId", "carClass"].forEach(function(key){
+      if(obj[key] != null && typeof obj[key] !== "string") throw new Error(key + " must be a string.");
+    });
     var notes = [];
 
     var ledNumber = parseInt(obj.ledNumber, 10);
@@ -732,9 +736,10 @@
       var na = [];
       for(var i=0;i<expectedLen;i++){
         var v = arr[i];
-        if(typeof v === "number"){ na.push(Math.round(v)); continue; }
-        if(v !== undefined && badVals.indexOf(g) === -1) badVals.push(g);
-        na.push(parseInt(v,10)||0);
+        if(typeof v !== "number" && v !== undefined && badVals.indexOf(g) === -1) badVals.push(g);
+        var parsed = typeof v === "number" ? Math.round(v) : parseInt(v,10)||0;
+        if(!Number.isFinite(parsed)) throw new Error("RPM values must be finite numbers (gear " + g + ").");
+        na.push(parsed);
       }
       gearRpm[g] = na;
     });
@@ -763,6 +768,7 @@
       blink = blink[0];
     }
 
+    repoLoadId++;
     state.carName = obj.carName || "";
     state.carId = obj.carId || "";
     state.carClass = obj.carClass || "";
@@ -1222,15 +1228,19 @@
     });
     if(state.gearOrder.indexOf(prevVal) !== -1) sel.value = prevVal;
 
+    renderGeneratorTarget();
+  }
+
+  function updatePreviewRange(){
     var maxRl = 0;
     state.gearOrder.forEach(function(g){ var v=(state.gearRpm[g]||[])[0]||0; if(v>maxRl) maxRl=v; });
     var maxRange = Math.max(1000, Math.round((maxRl*1.15)/100)*100 || 9000);
     var range = document.getElementById("prevRpm");
     range.max = maxRange;
-    renderGeneratorTarget();
   }
 
   function renderPreview(){
+    updatePreviewRange();
     var gear = document.getElementById("prevGear").value;
     var rpm = parseInt(document.getElementById("prevRpm").value,10) || 0;
     document.getElementById("prevRpmReadout").textContent = rpm;
@@ -1514,6 +1524,7 @@
   var REPO = "Lovely-Sim-Racing/lovely-car-data", BRANCH = "main";
   var RAW_BASE = "https://raw.githubusercontent.com/" + REPO + "/" + BRANCH + "/";
   var repo = {status:"idle", cars:{}, index:{}, error:"", promise:null};
+  var repoLoadId = 0; // Ignore responses after another load, close, or undo replaces the user's intent.
 
   function loadManifest(){
     if(repo.status === "loading" || repo.status === "ready") return repo.promise;
@@ -1546,7 +1557,7 @@
     renderRepoModal();
     document.getElementById("repoSearch").focus();
   }
-  function closeRepoModal(){ document.getElementById("repoBackdrop").hidden = true; }
+  function closeRepoModal(){ repoLoadId++; document.getElementById("repoBackdrop").hidden = true; }
 
   var repoSimsFilled = false;
   function renderRepoModal(){
@@ -1586,6 +1597,7 @@
   }
 
   function loadRepoCar(sim, entry){
+    var loadId = ++repoLoadId;
     var status = document.getElementById("repoStatus");
     status.classList.remove("err");
     status.textContent = "Loading data/" + entry.path + "…";
@@ -1593,6 +1605,7 @@
       if(!r.ok) throw new Error("GitHub returned " + r.status);
       return r.text();
     }).then(function(text){
+      if(loadId !== repoLoadId) return;
       flushCommit();
       importFromText(text);
       state.simId = sim;
@@ -1605,6 +1618,7 @@
       closeRepoModal();
       afterLoad();
     }).catch(function(err){
+      if(loadId !== repoLoadId) return;
       status.classList.add("err");
       status.textContent = "Couldn't load data/" + entry.path + ": " + (err && err.message ? err.message : err);
     });
@@ -1909,6 +1923,7 @@
 
   function restoreSnapshot(snap){
     var o = JSON.parse(snap);
+    repoLoadId++;
     stopSweep();
     restoring = true;
     try{
