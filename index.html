@@ -80,14 +80,18 @@
   .identity{grid-column:1; grid-row:1;}
   .colors{grid-column:1; grid-row:2;}
   .gears{grid-column:1; grid-row:3;}
+  .results{grid-column:1; grid-row:4;}
   .preview{
-    grid-column:2; grid-row:1 / span 3; position:sticky; top:calc(env(safe-area-inset-top, 0px) + 16px);
-    max-height:calc(100vh - 32px); overflow-y:auto;
+    grid-column:2; grid-row:1 / span 4; position:sticky; top:calc(env(safe-area-inset-top, 0px) + 16px);
   }
   @media (max-width:1080px){
     .layout{grid-template-columns:minmax(0,1fr);}
-    .identity, .colors, .gears, .preview{grid-column:1; grid-row:auto;}
-    .preview{position:static; max-height:none; overflow:visible;}
+    .identity, .colors, .gears, .preview, .results{grid-column:1;}
+    .identity{grid-row:1;}
+    .colors{grid-row:2;}
+    .preview{grid-row:3; position:static;}
+    .gears{grid-row:4;}
+    .results{grid-row:5;}
   }
   .field-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
   @media (max-width:900px){ .field-grid{grid-template-columns:repeat(2,1fr);} }
@@ -126,15 +130,16 @@
 
   .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:10px;}
   table{border-collapse:collapse; width:100%; min-width:520px;}
-  th,td{padding:6px 5px; text-align:center; border-bottom:1px solid var(--border);}
+  th,td{padding:5px 2px; text-align:center; border-bottom:1px solid var(--border);}
   thead th{font-family:var(--font-mono); font-size:.68rem; color:var(--text-dim); background:var(--surface-2); position:sticky; top:0;}
-  tbody th{font-family:var(--font-mono); font-weight:600; font-size:.78rem; text-align:left; padding-left:10px; white-space:nowrap;}
+  tbody th{font-family:var(--font-mono); font-weight:600; font-size:.78rem; text-align:left; padding-left:6px; white-space:nowrap;}
   /* #gearTable scoping is needed to beat the generic input[type="number"]{width:100%} rule. */
-  #gearTable td input[type="number"]{width:calc(6ch + 18px); text-align:center; padding:5px 4px; font-size:.75rem; -moz-appearance:textfield;}
+  #gearTable td input[type="number"]{width:calc(5.5ch + 8px); text-align:center; padding:5px 2px; font-size:.72rem; -moz-appearance:textfield;}
   #gearTable td input::-webkit-outer-spin-button, #gearTable td input::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
   #gearTable td input:disabled{opacity:.35;}
   tr.gear-row:hover{background:var(--surface-2);}
-  .row-actions{display:flex; gap:4px; justify-content:flex-end; padding-right:6px;}
+  .row-actions{display:flex; gap:2px; justify-content:flex-end;}
+  .row-actions button{padding:4px 5px;}
   .gear-tools{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center;}
   .add-gear{display:flex; gap:6px; align-items:center;}
   .add-gear input{width:80px;}
@@ -164,10 +169,12 @@
   .vicon.warn{background:var(--warn); color:#2b2000;}
   .vicon.error{background:var(--danger); color:#2b0503;}
 
-  .path-line{font-family:var(--font-mono); font-size:.72rem; color:var(--code-accent); background:var(--code-bg); border:1px solid var(--code-border); border-radius:8px 8px 0 0; padding:8px 12px; border-bottom:none; word-break:break-all;}
+  .path-line{font-family:var(--font-mono); font-size:.72rem; color:var(--code-accent); background:var(--code-bg); border:1px solid var(--code-border); border-radius:8px; padding:8px 12px; word-break:break-all;}
+  .output-details{margin-top:12px;}
+  .output-details summary{cursor:pointer; font-size:.78rem; color:var(--accent); margin-bottom:8px;}
   pre#jsonOut{
     font-family:var(--font-mono); font-size:.7rem; line-height:1.5; background:var(--code-bg); color:var(--code-text);
-    border:1px solid var(--code-border); border-radius:0 0 8px 8px; padding:12px; margin:0; max-height:340px; overflow:auto; white-space:pre;
+    border:1px solid var(--code-border); border-radius:8px; padding:12px; margin:0; white-space:pre-wrap; overflow-wrap:anywhere;
   }
   .copyrow{display:flex; gap:8px; margin-top:10px;}
   .contribute-steps{margin-top:16px; padding-top:14px; border-top:1px dashed var(--border); font-size:.74rem; color:var(--text-dim); line-height:1.6;}
@@ -205,7 +212,7 @@
   .out-tab[aria-selected="true"]{background:var(--accent-soft); border-color:var(--accent); color:var(--text);}
   pre#diffOut{
     font-family:var(--font-mono); font-size:.7rem; line-height:1.5; background:var(--code-bg); color:var(--code-text);
-    border:1px solid var(--code-border); border-radius:0 0 8px 8px; padding:12px 0; margin:0; max-height:340px; overflow:auto; white-space:pre;
+    border:1px solid var(--code-border); border-radius:8px; padding:12px 0; margin:0; white-space:pre-wrap; overflow-wrap:anywhere;
   }
   #diffOut .dl{display:block; padding:0 12px;}
   #diffOut .dl.add{background:rgba(74,215,149,.16); color:#b8f5d6;}
@@ -312,6 +319,17 @@
       </div>
       <div class="led-strip-edit" id="ledStripEdit"></div>
       <div class="led-editor" id="ledEditor"></div>
+      <div class="contribute-steps">
+        <h2>Capture overrides</h2>
+        <label class="checkline"><input type="checkbox" id="overrideColor"> Preserve this LED's color on future captures</label>
+        <label class="checkline"><input type="checkbox" id="overrideBlink"> Preserve redline blink interval</label>
+        <p id="overrideSummary"></p>
+        <div class="copyrow">
+          <button class="small" id="btnOverrideImport">Import capture overrides</button>
+          <button class="small" id="btnOverrideDownload">Download capture overrides</button>
+        </div>
+        <p class="tip">Put the downloaded sidecar beside the capture export in the configured capture output folder, replacing any older sidecar. The plugin reads it on the next <b>Stop and export</b>. Downloading it or reloading ATSR does not change an already generated profile. A color override cannot force a detected physical gap to light; this editor only shows gaps in the loaded profile. If all selections are removed, delete the existing sidecar to resume normal capture behavior.</p>
+      </div>
     </section>
 
     <section class="panel gears">
@@ -403,19 +421,24 @@
         <button class="small" id="btnSweep">▶ Rev sweep</button>
         <label class="checkline sweep-all"><input type="checkbox" id="sweepAll" checked> all gears</label>
       </div>
-      <p class="preview-caption">Follows how ATSR lights these files: an LED lights once RPM is above its value (a value of 0 is always lit), and black or transparent LEDs are gaps that never light. Above the redline (RL) every LED shows the RL color and blinks at the blink interval, going dark in between; with a transparent RL color the LEDs keep their own colors. The swatch before the redline line shows the RL color.</p>
+      <p class="preview-caption">Follows how ATSR lights these files: an LED lights once RPM is above its value (a value of 0 is always lit), and RGB black at any alpha is a physical gap that never lights. Above the redline (RL) every LED shows the RL color and blinks at the blink interval, going dark in between; with a transparent RL color the LEDs keep their own colors. The swatch before the redline line shows the RL color.</p>
+    </aside>
 
-      <h2 style="margin-top:18px;">Validation</h2>
+    <section class="panel results">
+      <h2>Validation</h2>
       <ul class="validation-list" id="validationList"></ul>
 
       <h2>JSON output</h2>
-      <div class="out-tabs" role="tablist" id="outTabs" hidden>
-        <button role="tab" class="out-tab" id="tabJson" aria-selected="true">JSON</button>
-        <button role="tab" class="out-tab" id="tabDiff" aria-selected="false">Changes</button>
-      </div>
       <div class="path-line" id="pathLine">data/…/….json</div>
-      <pre id="jsonOut"></pre>
-      <pre id="diffOut" hidden></pre>
+      <details class="output-details">
+        <summary>Inspect JSON and changes</summary>
+        <div class="out-tabs" role="tablist" id="outTabs" hidden>
+          <button role="tab" class="out-tab" id="tabJson" aria-selected="true">JSON</button>
+          <button role="tab" class="out-tab" id="tabDiff" aria-selected="false">Changes</button>
+        </div>
+        <pre id="jsonOut"></pre>
+        <pre id="diffOut" hidden></pre>
+      </details>
       <div class="copyrow">
         <button class="primary small" id="btnCopy" style="flex:1;">Copy JSON</button>
         <button class="small" id="btnDownload" style="flex:1;">Download .json</button>
@@ -424,7 +447,7 @@
       <div class="gh-hint" id="githubHint"></div>
       <div class="contribute-steps">
         This tool only produces the JSON text. It never submits anything for you.
-        <p class="tip-block"><b>Try it on your wheel first (ATSR):</b> download the file and put it in <code>&lt;SimHub folder&gt;\_ATSR_DevelopmentData\rpm_data\</code> (no game subfolder), keeping the downloaded name. Turn on <b>Developer Mode</b> in ATSR's RPM settings, or switch it off and on to reload; restart SimHub if the lights don't change. Delete the file when you're done, or ATSR keeps using it.</p>
+        <p class="tip-block"><b>Try it on your wheel first (ATSR):</b> download the car JSON and put it in <code>&lt;SimHub folder&gt;\_ATSR_DevelopmentData\rpm_data\</code> (no game subfolder), using <code id="atsrFileName"></code>. Turn on <b>Developer Mode</b> in ATSR's RPM settings, or switch it off and on to reload; restart SimHub if the lights don't change. Delete the file when you're done, or ATSR keeps using it.</p>
         <ol>
           <li><b>Open on GitHub</b> opens the right page in a new tab: a pre-filled new file for a new car, or the edit page for an existing one (the JSON is copied first so you can paste it over the old contents). You can also go to <code id="pathLine2">data/…/….json</code> yourself.</li>
           <li>GitHub creates a fork for you if needed. Review the file, choose <b>Propose changes</b>, then open the pull request.</li>
@@ -432,11 +455,25 @@
         The output already uses the repo's layout (arrays on one line). If you commit from a local clone with the repo's pre-commit hooks installed, check the diff: the JSON prettifier hook may spread the arrays over many lines.
         Note: this tool can't edit the optional <code>carSettings</code> field (advanced, rarely used). If an imported file has it, or other fields like <code>_schemaVersion</code>, they're written back unchanged.
       </div>
-    </aside>
+    </section>
   </div>
 </div>
 
 <footer>Unofficial fan-made tool, not affiliated with Lovely Sim Racing. Data format &copy; Lovely Sim Racing, ATSR &amp; Gomez Sim Industries.</footer>
+
+<div class="modal-backdrop" id="overrideBackdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="overrideTitle">
+    <h2 id="overrideTitle">Import capture overrides</h2>
+    <p class="tip">Load a sidecar for the car already in the editor. It changes selected colors and blink timing only.</p>
+    <input type="file" id="overrideFile" accept=".json,application/json" aria-label="Capture override file">
+    <textarea id="overrideText" placeholder='{ "game": "...", "carId": "...", "ledNumber": 10, ... }'></textarea>
+    <div class="modal-err" id="overrideErr" hidden></div>
+    <div class="modal-actions">
+      <button class="ghost" id="overrideCancel">Cancel</button>
+      <button class="primary" id="overrideParse">Apply overrides</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-backdrop" id="importBackdrop" hidden>
   <div class="modal">
@@ -543,6 +580,7 @@
   function bindPicker(selectId, inputId, key, options){
     var sel = document.getElementById(selectId), inp = document.getElementById(inputId);
     sel.addEventListener("change", function(){
+      var oldValue = state[key];
       if(sel.value === OTHER){
         inp.hidden = false;
         inp.value = options.indexOf(state[key]) === -1 ? state[key] : "";
@@ -552,6 +590,7 @@
         inp.hidden = true;
         state[key] = sel.value;
       }
+      if(key === "simId" && state[key] !== oldValue) clearCaptureOverrides();
       if(key === "simId") renderClassPicker();
       renderPathPreview(); renderValidation(); renderJson();
     });
@@ -573,7 +612,8 @@
     gearRpm: {},     // {gear: [int,...]}
     extra: {},       // imported keys this editor doesn't handle (_schemaVersion, carSettings, …), written back unchanged
     origin: null,    // {path:'sim/file.json', baseline:'…'} when loaded from the repo; baseline = this tool's output right after loading
-    importNotes: []  // what import had to adjust to fit the file into the editor
+    importNotes: [], // what import had to adjust to fit the file into the editor
+    captureOverrides: {colors:{}, blink:false}
   };
 
   var KNOWN_KEYS = ["carName","carId","carClass","ledNumber","redlineBlinkInterval","ledColor","ledRpm"];
@@ -643,6 +683,94 @@
     return str;
   }
 
+  function clearCaptureOverrides(){ state.captureOverrides = {colors:{}, blink:false}; }
+  function captureOverrideFileName(){ return (slugify(state.carId) || "car") + ".overrides.json"; }
+  function atsrDevelopmentFileName(){
+    var sim = slugify(state.simId);
+    return (sim === "lmu" || sim === "le-mans-ultimate") &&
+      state.carId.toLowerCase() === "lamborghini iron lynx 2024" ? "lamborghini-sc63.json" : (slugify(state.carId) || "car") + ".json";
+  }
+  function captureColor(i){
+    var c = state.ledColors[i];
+    return (c.off && (i === 0 || !isGapColor(c.hex)) ? "#00000000" : c.hex).toUpperCase();
+  }
+  function buildCaptureOverrides(){
+    var chosen = state.captureOverrides || {colors:{}, blink:false};
+    var game = slugify(state.simId);
+    if(!game || game !== state.simId || !state.carId || !slugify(state.carId)) throw new Error("Set the exact capture game folder and raw Car ID first.");
+    var out = {game:game, carId:state.carId, ledNumber:state.ledNumber};
+    var slots = Object.keys(chosen.colors || {}).filter(function(k){ return chosen.colors[k]; }).map(Number).sort(function(a,b){ return a-b; });
+    if(slots.length){
+      out.ledColor = {};
+      slots.forEach(function(i){ out.ledColor[String(i)] = captureColor(i); });
+    }
+    if(chosen.blink){
+      if(!Number.isInteger(state.redlineBlink) || state.redlineBlink < 0 || state.redlineBlink > 2147483647)
+        throw new Error("Blink interval must be an integer from 0 through 2147483647 ms.");
+      out.redlineBlinkInterval = state.redlineBlink;
+    }
+    if(!slots.length && !chosen.blink) throw new Error("Select at least one color or the blink interval.");
+    return out;
+  }
+  function parseCaptureOverrides(raw){
+    var obj;
+    try{ obj = JSON.parse(raw); }catch(e){ throw new Error("Could not parse override JSON: " + e.message); }
+    // JSON.parse turns 2.0 and 2e0 into 2; the plugin requires integer JSON tokens.
+    ["ledNumber", "redlineBlinkInterval"].forEach(function(key){
+      var match = raw.match(new RegExp('"' + key + '"\\s*:\\s*([^\\s,}\\]]+)'));
+      if(match && !/^-?[0-9]+$/.test(match[1])) throw new Error(key + " must be a JSON integer.");
+    });
+    if(!obj || typeof obj !== "object" || Array.isArray(obj)) throw new Error("Capture overrides must be a JSON object.");
+    var allowed = ["game","carId","ledNumber","ledColor","redlineBlinkInterval"];
+    if(Object.keys(obj).some(function(k){ return allowed.indexOf(k) === -1; })) throw new Error("Capture overrides contain an unsupported field.");
+    if(typeof obj.game !== "string" || obj.game.toLowerCase() !== slugify(state.simId).toLowerCase() ||
+       typeof obj.carId !== "string" || obj.carId.toLowerCase() !== state.carId.toLowerCase())
+      throw new Error("Capture overrides belong to a different game or car.");
+    if(!Number.isInteger(obj.ledNumber) || obj.ledNumber !== state.ledNumber)
+      throw new Error("Capture overrides have a different LED count.");
+    var colors = {};
+    if("ledColor" in obj){
+      if(!obj.ledColor || typeof obj.ledColor !== "object" || Array.isArray(obj.ledColor))
+        throw new Error("Override ledColor must be an object of LED indices and colors.");
+      Object.keys(obj.ledColor).forEach(function(key){
+        if(!/^(0|[1-9][0-9]*)$/.test(key) || Number(key) > state.ledNumber ||
+           typeof obj.ledColor[key] !== "string" || !/^#[0-9a-fA-F]{8}$/.test(obj.ledColor[key]))
+          throw new Error("Invalid override color or LED index: " + key);
+        colors[key] = obj.ledColor[key].toUpperCase();
+      });
+    }
+    var blink = "redlineBlinkInterval" in obj;
+    if(blink && (!Number.isInteger(obj.redlineBlinkInterval) || obj.redlineBlinkInterval < 0 || obj.redlineBlinkInterval > 2147483647))
+      throw new Error("Override blink interval must be an integer from 0 through 2147483647 ms.");
+    if(!Object.keys(colors).length && !blink) throw new Error("Capture overrides contain no selected colors or blink interval.");
+    return {colors:colors, blink:blink ? obj.redlineBlinkInterval : null};
+  }
+  function importCaptureOverrides(raw){
+    var parsed = parseCaptureOverrides(raw);
+    flushCommit();
+    Object.keys(parsed.colors).forEach(function(key){
+      var i = Number(key), hex = parsed.colors[key];
+      state.ledColors[i] = {hex:hex, off:i === 0 ? hex === "#00000000" : isGapColor(hex)};
+    });
+    if(parsed.blink !== null) state.redlineBlink = parsed.blink;
+    state.captureOverrides = {colors:{}, blink:parsed.blink !== null};
+    Object.keys(parsed.colors).forEach(function(key){ state.captureOverrides.colors[key] = true; });
+    renderAll();
+    flushCommit();
+  }
+  function renderCaptureOverrides(){
+    var chosen = state.captureOverrides || {colors:{}, blink:false};
+    document.getElementById("overrideColor").checked = !!chosen.colors[selectedLed];
+    document.getElementById("overrideBlink").checked = !!chosen.blink;
+    var fields = Object.keys(chosen.colors).filter(function(k){ return chosen.colors[k]; }).map(function(k){ return "LED " + ledLabel(+k) + " " + captureColor(+k); });
+    if(chosen.blink) fields.push("blink " + state.redlineBlink + " ms");
+    document.getElementById("overrideSummary").textContent = fields.length
+      ? captureOverrideFileName() + " → " + fields.join(", ")
+      : "Nothing selected. If an older sidecar exists, remove it from the capture output folder.";
+    document.getElementById("btnOverrideDownload").disabled = !fields.length;
+    document.getElementById("atsrFileName").textContent = atsrDevelopmentFileName();
+  }
+
   function jstr(s){ return JSON.stringify(String(s===undefined||s===null?"":s)); }
 
   function defaultRpmArray(len){ var a=[]; for(var i=0;i<len;i++) a.push(0); return a; }
@@ -650,6 +778,7 @@
 
   // ---------- array resize on ledNumber change ----------
   function resizeToLedNumber(newLedNumber){
+    if(newLedNumber !== state.ledNumber) clearCaptureOverrides();
     var newLen = newLedNumber + 1;
     var oldColors = state.ledColors;
     var nc = [];
@@ -676,6 +805,7 @@
     state.extra = {};
     state.origin = null;
     state.importNotes = [];
+    clearCaptureOverrides();
     state.gearOrder = ["R","N","1","2","3","4","5","6"];
     state.gearRpm = {};
     state.gearOrder.forEach(function(g){ state.gearRpm[g] = defaultRpmArray(BLANK_LED_NUMBER+1); });
@@ -704,6 +834,8 @@
     catch(e){ throw new Error("Could not parse JSON: " + e.message); }
 
     if(!obj || typeof obj !== "object" || Array.isArray(obj)) throw new Error("Expected a JSON object like { \"carName\": … }.");
+    if("game" in obj || (obj.ledColor && !Array.isArray(obj.ledColor)))
+      throw new Error("This looks like a capture override. Use Import capture overrides after loading its car profile.");
     ["carName", "carId", "carClass"].forEach(function(key){
       if(obj[key] != null && typeof obj[key] !== "string") throw new Error(key + " must be a string.");
     });
@@ -781,6 +913,7 @@
     Object.keys(obj).forEach(function(k){ if(KNOWN_KEYS.indexOf(k) === -1) state.extra[k] = obj[k]; });
     state.origin = null;
     state.importNotes = notes;
+    clearCaptureOverrides();
     selectedLed = 0;
   }
 
@@ -897,6 +1030,7 @@
     el.addEventListener("input", function(){
       var v = el.value;
       if(kind === "int") v = v === "" ? 0 : parseInt(v,10);
+      if((key === "simId" || key === "carId") && v !== state[key]) clearCaptureOverrides();
       state[key] = v;
       if(key === "simId") renderClassPicker();
       renderPathPreview();
@@ -962,7 +1096,7 @@
 
   function selectLed(i, focus){
     selectedLed = clamp(i, 0, state.ledColors.length-1);
-    renderColorStrip(); renderLedEditor();
+    renderColorStrip(); renderLedEditor(); renderCaptureOverrides();
     if(focus){ var chip = document.getElementById("ledStripEdit").children[selectedLed]; if(chip) chip.focus(); }
   }
 
@@ -1147,13 +1281,13 @@
       }
       var tdActions = document.createElement("td");
       var actionsWrap = document.createElement("div"); actionsWrap.className="row-actions";
-      var copyBtn = document.createElement("button"); copyBtn.className="small ghost"; copyBtn.textContent="Copy→all"; copyBtn.title="Copy this gear's RPM values to every other gear";
+      var copyBtn = document.createElement("button"); copyBtn.className="small ghost"; copyBtn.textContent="↪ All"; copyBtn.title="Copy this gear's RPM values to every other gear"; copyBtn.setAttribute("aria-label", copyBtn.title);
       copyBtn.addEventListener("click", function(){
         var src = state.gearRpm[g].slice();
         state.gearOrder.forEach(function(og){ if(og!==g) state.gearRpm[og] = src.slice(); });
         renderGearTable(); renderPreview(); renderValidation(); renderJson();
       });
-      var delBtn = document.createElement("button"); delBtn.className="small ghost"; delBtn.textContent="✕"; delBtn.title="Remove gear";
+      var delBtn = document.createElement("button"); delBtn.className="small ghost"; delBtn.textContent="✕"; delBtn.title="Remove gear"; delBtn.setAttribute("aria-label", delBtn.title);
       delBtn.addEventListener("click", function(){
         if(state.gearOrder.length<=1) return;
         var idx = state.gearOrder.indexOf(g);
@@ -1417,7 +1551,9 @@
     }
 
     if(!slugify(state.carId)) add("error","Can't derive a file name from carId.");
-    else add("ok","File name: "+slugify(state.carId)+".json");
+    else add("ok","Capture/repo file name: "+slugify(state.carId)+".json");
+    if(atsrDevelopmentFileName() !== (slugify(state.carId) || "car") + ".json")
+      add("info","ATSR development copy uses " + atsrDevelopmentFileName() + "; capture and repo files keep " + slugify(state.carId) + ".json.");
 
     // Checks against the repo's manifest (only once it has loaded from GitHub).
     var relPath = repoRelPath();
@@ -1425,7 +1561,9 @@
       var sim = slugify(state.simId);
       var existing = repo.index[relPath];
       if(state.origin && state.origin.path !== relPath){
-        add("warn","This car is data/" + state.origin.path + " in the repo, but ATSR looks for files named after the carId, i.e. data/" + relPath + ". " +
+        if(atsrDevelopmentFileName() !== slugify(state.carId) + ".json")
+          add("info","Repo origin data/" + state.origin.path + " differs from the capture name data/" + relPath + ". ATSR's separate development name does not imply this repo file needs renaming; verify its identity before changing repository paths.");
+        else add("warn","This car is data/" + state.origin.path + " in the repo, but ATSR looks for files named after the carId, i.e. data/" + relPath + ". " +
           (state.origin.path.split("/")[0] === relPath.split("/")[0]
             ? "So ATSR never finds the current file; submitting this as data/" + relPath + " fixes that (remove the old file in the same pull request)."
             : "Submitting it creates a new file and leaves the old one in place."));
@@ -1457,6 +1595,7 @@
   function renderJson(){
     document.getElementById("jsonOut").textContent = buildJsonText();
     renderDiff();
+    renderCaptureOverrides();
     scheduleCommit();
   }
 
@@ -1508,7 +1647,7 @@
     copyText(buildJsonText()).then(function(){done(true);}, function(){done(false);});
   });
 
-  // Named after the carId, which is the file name the repo and ATSR look for.
+  // Normal car download keeps the capture/repo basename. ATSR's development copy may differ.
   document.getElementById("btnDownload").addEventListener("click", function(){
     var blob = new Blob([buildJsonText()], {type: "application/json"});
     var a = document.createElement("a");
@@ -1518,6 +1657,44 @@
     a.click();
     document.body.removeChild(a);
     setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  });
+
+  document.getElementById("overrideColor").addEventListener("change", function(e){
+    state.captureOverrides.colors[String(selectedLed)] = e.target.checked;
+    renderJson();
+  });
+  document.getElementById("overrideBlink").addEventListener("change", function(e){
+    state.captureOverrides.blink = e.target.checked;
+    renderJson();
+  });
+  document.getElementById("btnOverrideDownload").addEventListener("click", function(){
+    try{
+      var blob = new Blob([JSON.stringify(buildCaptureOverrides(), null, 2) + "\n"], {type:"application/json"});
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = captureOverrideFileName();
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+    }catch(e){ alert(e.message); }
+  });
+  document.getElementById("btnOverrideImport").addEventListener("click", function(){
+    document.getElementById("overrideErr").hidden = true;
+    document.getElementById("overrideFile").value = "";
+    document.getElementById("overrideText").value = "";
+    document.getElementById("overrideBackdrop").hidden = false;
+    document.getElementById("overrideText").focus();
+  });
+  document.getElementById("overrideFile").addEventListener("change", function(e){
+    var file = e.target.files[0];
+    if(file) file.text().then(function(content){ document.getElementById("overrideText").value = content; });
+  });
+  document.getElementById("overrideCancel").addEventListener("click", function(){ document.getElementById("overrideBackdrop").hidden = true; });
+  document.getElementById("overrideParse").addEventListener("click", function(){
+    var err = document.getElementById("overrideErr");
+    try{
+      importCaptureOverrides(document.getElementById("overrideText").value);
+      document.getElementById("overrideBackdrop").hidden = true;
+    }catch(e){ err.textContent = e.message; err.hidden = false; }
   });
 
   // ---------- Lovely Car Data repo (read-only, public files on GitHub) ----------
@@ -1927,10 +2104,12 @@
     stopSweep();
     restoring = true;
     try{
+      state.captureOverrides = {colors:{}, blink:false};
       Object.keys(o.state).forEach(function(k){ state[k] = o.state[k]; });
       if(!state.extra) state.extra = {};
       if(!state.importNotes) state.importNotes = [];
       if(state.origin === undefined) state.origin = null;
+      if(!state.captureOverrides) clearCaptureOverrides();
       selectedLed = o.selectedLed || 0;
       if(selectedLed >= state.ledColors.length) selectedLed = 0;
       renderAll();
@@ -1961,13 +2140,14 @@
     if(e.key === "Escape"){
       if(!document.getElementById("repoBackdrop").hidden) closeRepoModal();
       if(!document.getElementById("importBackdrop").hidden) document.getElementById("importBackdrop").hidden = true;
+      if(!document.getElementById("overrideBackdrop").hidden) document.getElementById("overrideBackdrop").hidden = true;
       return;
     }
     if(!(e.ctrlKey || e.metaKey) || e.altKey) return;
     var t = e.target, tag = t && t.tagName;
     // Leave text fields to the browser's own undo; their edits still land in this history.
     if(tag === "TEXTAREA" || (tag === "INPUT" && /^(text|number|search)$/.test(t.type))) return;
-    if(!document.getElementById("repoBackdrop").hidden || !document.getElementById("importBackdrop").hidden) return;
+    if(!document.getElementById("repoBackdrop").hidden || !document.getElementById("importBackdrop").hidden || !document.getElementById("overrideBackdrop").hidden) return;
     var k = e.key.toLowerCase();
     if(k === "z" && !e.shiftKey){ e.preventDefault(); undo(); }
     else if(k === "y" || (k === "z" && e.shiftKey)){ e.preventDefault(); redo(); }

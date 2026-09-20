@@ -35,9 +35,11 @@ function setup() {
   vm.runInContext(script.slice(0, script.indexOf('  // ---------- boot ----------')) + `
     globalThis.app = {state, importFromText, buildJsonText, renderAll, loadBlank,
       loadRepoCar, closeRepoModal, restoreSnapshot, snapshot, renderPreview,
-      initHistory: function(){ lastSnap = snapshot(); }, undo};
+      initHistory: function(){ lastSnap = snapshot(); }, undo, redo, flushCommit,
+      buildCaptureOverrides, captureOverrideFileName, importCaptureOverrides,
+      atsrDevelopmentFileName, parseCaptureOverrides, exampleText:EXAMPLE_TEXT};
   })();`, context);
-  return {app: context.app, get, requests};
+  return {app: context.app, get, requests, drafts};
 }
 
 const sample = '{"carName":"Test","carId":"test","carClass":"GT3","ledNumber":2,' +
@@ -46,7 +48,7 @@ const sample = '{"carName":"Test","carId":"test","carClass":"GT3","ledNumber":2,
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
 async function main() {
-  const {app, get, requests} = setup();
+  const {app, get, requests, drafts} = setup();
   app.importFromText(sample);
   const before = app.snapshot();
   for (const key of ['carName', 'carId', 'carClass']) {
@@ -95,6 +97,86 @@ async function main() {
   app.loadRepoCar('assettocorsa', entry);
   requests.shift().reject(new Error('Current failure')); await tick();
   assert.match(get('repoStatus').textContent, /Current failure/);
+
+  app.importFromText(sample);
+  app.state.simId = 'lmu';
+  app.state.carId = 'Lamborghini Iron Lynx 2024';
+  app.state.ledNumber = 10;
+  app.state.ledColors = Array.from({length: 11}, () => ({hex:'#FFFF0000', off:false}));
+  for(const gear of app.state.gearOrder) app.state.gearRpm[gear] = Array(11).fill(5000);
+  app.state.captureOverrides.colors = {'6':true, '7':true, '8':true};
+  for(const i of [6,7,8]) app.state.ledColors[i].hex = '#FFFFFF00';
+  assert.equal(app.captureOverrideFileName(), 'lamborghini-iron-lynx-2024.overrides.json');
+  assert.equal(app.atsrDevelopmentFileName(), 'lamborghini-sc63.json');
+  const sc63 = app.buildCaptureOverrides();
+  assert.deepEqual(JSON.parse(JSON.stringify(sc63)), {game:'lmu', carId:'Lamborghini Iron Lynx 2024', ledNumber:10,
+    ledColor:{'6':'#FFFFFF00','7':'#FFFFFF00','8':'#FFFFFF00'}});
+  const rpmBefore = JSON.stringify(app.state.gearRpm);
+  app.state.ledColors[6].hex = '#FFFF0000';
+  app.importCaptureOverrides(JSON.stringify(sc63));
+  assert.equal(app.state.ledColors[6].hex, '#FFFFFF00');
+  assert.equal(app.state.ledColors[5].hex, '#FFFF0000');
+  assert.equal(JSON.stringify(app.state.gearRpm), rpmBefore);
+  assert.equal(app.state.redlineBlink, 0);
+  assert.equal(app.buildJsonText().includes('captureOverrides'), false);
+  assert.equal(app.buildJsonText().includes('"game"'), false);
+  assert.equal(app.atsrDevelopmentFileName(), 'lamborghini-sc63.json');
+  app.state.simId = 'assettocorsacompetizione';
+  assert.equal(app.atsrDevelopmentFileName(), 'lamborghini-iron-lynx-2024.json');
+  app.state.simId = 'le-mans-ultimate';
+  assert.equal(app.atsrDevelopmentFileName(), 'lamborghini-sc63.json');
+
+  app.importFromText(app.exampleText);
+  app.state.simId = 'assettocorsacompetizione';
+  const profileBefore = app.buildJsonText();
+  const blinkOnly = {game:'assettocorsacompetizione', carId:'mclaren_720s_gt3_evo', ledNumber:12, redlineBlinkInterval:200};
+  app.importCaptureOverrides(JSON.stringify(blinkOnly));
+  assert.equal(app.captureOverrideFileName(), 'mclaren-720s-gt3-evo.overrides.json');
+  assert.equal(app.state.redlineBlink, 200);
+  assert.deepEqual(JSON.parse(app.buildJsonText()).ledColor, JSON.parse(profileBefore).ledColor);
+  assert.deepEqual(JSON.parse(app.buildJsonText()).ledRpm, JSON.parse(profileBefore).ledRpm);
+  assert.deepEqual(JSON.parse(JSON.stringify(app.buildCaptureOverrides())), blinkOnly);
+  const stable = app.snapshot();
+  for(const bad of [
+    {...blinkOnly, game:'lmu'}, {...blinkOnly, carId:'other'}, {...blinkOnly, ledNumber:3},
+    {...blinkOnly, ledRpm:[]}, {...blinkOnly, redlineBlinkInterval:-1},
+    {...blinkOnly, redlineBlinkInterval:1.5}, {...blinkOnly, redlineBlinkInterval:2147483648},
+    {...blinkOnly, redlineBlinkInterval:null},
+    {game:blinkOnly.game, carId:blinkOnly.carId, ledNumber:12},
+    {...blinkOnly, ledColor:{'13':'#FFFFFFFF'}}, {...blinkOnly, ledColor:{'01':'#FFFFFFFF'}},
+    {...blinkOnly, ledColor:{'1':'red'}}, {...blinkOnly, ledColor:['#FFFFFFFF']}
+  ]) {
+    assert.throws(() => app.importCaptureOverrides(JSON.stringify(bad)));
+    assert.equal(app.snapshot(), stable, 'Rejected override must preserve profile and selections');
+  }
+  for(const raw of ['"ledNumber":12.0', '"redlineBlinkInterval":2e2']) {
+    assert.throws(() => app.importCaptureOverrides(JSON.stringify(blinkOnly).replace(raw.startsWith('"ledNumber"') ? '"ledNumber":12' : '"redlineBlinkInterval":200', raw)));
+    assert.equal(app.snapshot(), stable);
+  }
+  assert.throws(() => app.importFromText(JSON.stringify(blinkOnly)), /capture override/);
+  app.importCaptureOverrides(JSON.stringify({...blinkOnly, redlineBlinkInterval:0, ledColor:{'0':'#00000000'}}));
+  assert.equal(app.state.ledColors[0].hex, '#00000000');
+  assert.equal(app.state.gearRpm.R[0], 7200);
+  assert.equal(app.buildCaptureOverrides().redlineBlinkInterval, 0);
+  assert.equal(app.buildCaptureOverrides().ledColor['0'], '#00000000');
+  app.flushCommit();
+  assert.equal(JSON.parse(JSON.parse(drafts.get('rpm-led-builder:draft:v1')).snap).state.captureOverrides.blink, true);
+  app.undo();
+  assert.equal(app.state.redlineBlink, 200);
+  app.redo();
+  assert.equal(app.state.redlineBlink, 0);
+  const oldDraft = JSON.parse(app.snapshot()); delete oldDraft.state.captureOverrides;
+  app.restoreSnapshot(JSON.stringify(oldDraft));
+  assert.deepEqual(JSON.parse(JSON.stringify(app.state.captureOverrides)), {colors:{},blink:false});
+  app.importCaptureOverrides(JSON.stringify(blinkOnly));
+  get('fCarId').value = 'another_car'; get('fCarId').listeners.input[0]();
+  assert.equal(app.state.captureOverrides.blink, false);
+  app.importCaptureOverrides(JSON.stringify({...blinkOnly, carId:'another_car'}));
+  get('fLedNumber').value = '3'; get('fLedNumber').listeners.change[0]({target:get('fLedNumber')});
+  assert.equal(app.state.captureOverrides.blink, false);
+  app.loadBlank();
+  assert.deepEqual(JSON.parse(JSON.stringify(app.state.captureOverrides)), {colors:{},blink:false});
   console.log('PASS: atomic imports, finite RPMs, preview range, stale loads, load undo, and fetch errors');
+  console.log('PASS: sparse capture overrides, validation, history, identity, and ATSR filename');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
