@@ -477,8 +477,8 @@
 
 <div class="modal-backdrop" id="importBackdrop" hidden>
   <div class="modal">
-    <h2 style="margin-bottom:0;">Import existing JSON</h2>
-    <p style="font-size:.78rem; color:var(--text-dim);">Paste the contents of an existing car file (or a work-in-progress one) to load it into the editor.</p>
+    <h2 id="importTitle" style="margin-bottom:0;">Import existing JSON</h2>
+    <p id="importHelp" style="font-size:.78rem; color:var(--text-dim);">Paste the contents of an existing car file (or a work-in-progress one) to load it into the editor.</p>
     <textarea id="importText" placeholder='{ "carName": "...", "carId": "...", ... }'></textarea>
     <div class="modal-err" id="importErr" hidden></div>
     <div class="modal-actions">
@@ -620,6 +620,7 @@
   var PLACEHOLDER_NAMES = ["New Car"], PLACEHOLDER_IDS = ["new_car_id"];
 
   var selectedLed = 0;
+  var pendingImportSim = "", readClipboardOnImport = false;
 
   // ---------- helpers ----------
   function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
@@ -2164,6 +2165,36 @@
     flushCommit();
   }
 
+  function captureImportSim(search){
+    var params = new URLSearchParams(search || "");
+    if(params.get("capture") !== "clipboard") return null;
+    var sim = params.get("sim") || "";
+    return SIM_FOLDERS.indexOf(sim) === -1 ? "" : sim;
+  }
+
+  function openImportDialog(sim, fromClipboard){
+    pendingImportSim = sim || "";
+    readClipboardOnImport = !!fromClipboard;
+    document.getElementById("importErr").hidden = true;
+    document.getElementById("importText").value = "";
+    document.getElementById("importTitle").textContent = fromClipboard ? "Import capture from SimHub" : "Import existing JSON";
+    document.getElementById("importHelp").textContent = fromClipboard
+      ? "The capture plugin copied the exported car JSON. Import it from the clipboard to continue."
+      : "Paste the contents of an existing car file (or a work-in-progress one) to load it into the editor.";
+    document.getElementById("importParse").textContent = fromClipboard ? "Import copied capture" : "Load into editor";
+    document.getElementById("importBackdrop").hidden = false;
+    if(!fromClipboard) document.getElementById("importText").focus();
+  }
+
+  function useImportedText(rawText){
+    flushCommit();
+    importFromText(rawText);
+    if(pendingImportSim) state.simId = pendingImportSim;
+    pendingImportSim = "";
+    document.getElementById("importBackdrop").hidden = true;
+    afterLoad();
+  }
+
   document.getElementById("btnExample").addEventListener("click", function(){
     flushCommit();
     importFromText(EXAMPLE_TEXT);
@@ -2184,23 +2215,33 @@
   });
 
   document.getElementById("btnImport").addEventListener("click", function(){
-    document.getElementById("importErr").hidden = true;
-    document.getElementById("importText").value = "";
-    document.getElementById("importBackdrop").hidden = false;
-    document.getElementById("importText").focus();
+    openImportDialog("", false);
   });
   document.getElementById("importCancel").addEventListener("click", function(){
+    pendingImportSim = "";
+    readClipboardOnImport = false;
     document.getElementById("importBackdrop").hidden = true;
   });
-  document.getElementById("importParse").addEventListener("click", function(){
+  document.getElementById("importParse").addEventListener("click", async function(){
     var errEl = document.getElementById("importErr");
+    var readingClipboard = readClipboardOnImport;
     try{
-      flushCommit();
-      importFromText(document.getElementById("importText").value);
-      document.getElementById("importBackdrop").hidden = true;
-      afterLoad();
+      var text = document.getElementById("importText").value;
+      if(readClipboardOnImport){
+        if(!navigator.clipboard || !navigator.clipboard.readText) throw new Error("Clipboard import is not available in this browser.");
+        text = await navigator.clipboard.readText();
+        document.getElementById("importText").value = text;
+        readClipboardOnImport = false;
+        document.getElementById("importParse").textContent = "Load into editor";
+      }
+      useImportedText(text);
     }catch(e){
-      errEl.textContent = e.message;
+      readClipboardOnImport = false;
+      document.getElementById("importParse").textContent = "Load into editor";
+      document.getElementById("importText").focus();
+      errEl.textContent = readingClipboard
+        ? "The clipboard could not be read. Paste the copied JSON below, then choose Load into editor."
+        : e.message;
       errEl.hidden = false;
     }
   });
@@ -2223,5 +2264,10 @@
     lastSnap = snapshot();
   }
   loadManifest();
+  var captureSim = captureImportSim(window.location.search);
+  if(captureSim !== null){
+    window.history.replaceState(null, "", window.location.pathname);
+    openImportDialog(captureSim, true);
+  }
 })();
 </script>

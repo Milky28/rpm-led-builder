@@ -25,6 +25,7 @@ function setup() {
     document: {getElementById: get, createElement: element, createTextNode: text => ({textContent: text}),
       querySelectorAll: () => [], addEventListener() {}},
     window: {matchMedia: () => ({matches: false})},
+    URLSearchParams,
     setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {},
     localStorage: {setItem: (k, v) => drafts.set(k, v), getItem: k => drafts.get(k)},
     fetch: () => new Promise((resolve, reject) => requests.push({resolve, reject}))
@@ -37,7 +38,7 @@ function setup() {
       loadRepoCar, closeRepoModal, restoreSnapshot, snapshot, renderPreview,
       initHistory: function(){ lastSnap = snapshot(); }, undo, redo, flushCommit,
       buildCaptureOverrides, captureOverrideFileName, importCaptureOverrides,
-      atsrDevelopmentFileName, parseCaptureOverrides, exampleText:EXAMPLE_TEXT};
+      atsrDevelopmentFileName, parseCaptureOverrides, captureImportSim, exampleText:EXAMPLE_TEXT};
   })();`, context);
   return {app: context.app, get, requests, drafts};
 }
@@ -60,6 +61,9 @@ async function main() {
     assert.equal(app.snapshot(), before, 'Rejected RPM must preserve the current car');
   }
   assert.deepEqual(JSON.parse(app.buildJsonText()), JSON.parse(sample));
+  assert.equal(app.captureImportSim('?capture=clipboard&sim=automobilista2'), 'automobilista2');
+  assert.equal(app.captureImportSim('?capture=clipboard&sim=unknown'), '');
+  assert.equal(app.captureImportSim('?sim=automobilista2'), null);
 
   app.renderAll();
   const input = get('gearTableBody').children[0].children[1].children[0];
